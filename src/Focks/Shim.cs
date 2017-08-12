@@ -21,6 +21,10 @@ namespace Focks
             MethodCallExpression methodCall = original.Body as MethodCallExpression;
             return new Shim(methodCall.Method, null);
         }
+        public static Shim Replace<T>(Expression<Func<T>> original)
+        {
+            return new Shim(GetMethodFromExpression(original.Body), null);
+        }
 
         public Shim With(Delegate replacement)
         {
@@ -29,6 +33,25 @@ namespace Focks
 
             _replacement = replacement;
             return this;
+        }
+
+        private static MethodInfo GetMethodFromExpression(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    MemberExpression memberExpression = expression as MemberExpression;
+                    MemberInfo memberInfo = memberExpression.Member;
+                    if (memberInfo.MemberType == MemberTypes.Property)
+                    {
+                        PropertyInfo propertyInfo = memberInfo as PropertyInfo;
+                        return propertyInfo.GetGetMethod();
+                    }
+                    else
+                        throw new NotImplementedException();
+                default:
+                    throw new NotImplementedException();
+            }
         }
 
         private bool SignatureEquals(MethodInfo m1, MethodInfo m2)
