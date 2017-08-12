@@ -49,6 +49,9 @@ namespace Focks
                     }
                     else
                         throw new NotImplementedException();
+                case ExpressionType.Call:
+                    MethodCallExpression methodCall = expression as MethodCallExpression;
+                    return methodCall.Method;
                 default:
                     throw new NotImplementedException();
             }
