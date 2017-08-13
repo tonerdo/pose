@@ -7,8 +7,24 @@ namespace Focks
 {
     public class Shim
     {
-        protected MethodBase _original;
-        protected Delegate _replacement;
+        private MethodBase _original;
+        private Delegate _replacement;
+
+        public MethodBase Original
+        {
+            get
+            {
+                return _original;
+            }
+        }
+
+        public Delegate Replacement
+        {
+            get
+            {
+                return _replacement;
+            }
+        }
 
         internal Shim(MethodBase original, Delegate replacement)
         {

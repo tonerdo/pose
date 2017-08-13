@@ -12,10 +12,12 @@ namespace Focks.DependencyAnalysis
     {
         private MethodBase _root;
         private CallGraph _callGraph;
+        private CallGraph _subGraph;
 
         private CallAnalyzer()
         {
             _callGraph = new CallGraph();
+            _subGraph = new CallGraph();
         }
 
         public static CallAnalyzer CreateAnalyzer(MethodBase root)
@@ -76,7 +78,27 @@ namespace Focks.DependencyAnalysis
             }
         }
 
-        static IEnumerable<MemberInfo> GetMethodCalls(IList<Instruction> instructions)
+        public CallGraph GenerateCallSubGraph(List<CallNode> nodes)
+        {
+            foreach (CallNode node in nodes)
+                GetDependantNodesForNode(node);
+            
+            return _subGraph;
+        }
+
+        private void GetDependantNodesForNode(CallNode node)
+        {
+            foreach (var dep in node.Dependants)
+            {
+                if (!_subGraph.Exists(d => d.Name == dep.Name))
+                {
+                    _subGraph.Add(dep);
+                    GetDependantNodesForNode(dep);
+                }
+            }
+        }
+
+        private IEnumerable<MemberInfo> GetMethodCalls(IList<Instruction> instructions)
         {
             var methodCalls = instructions
                 .Where(i => (i.Operand as MethodInfo) != null || (i.Operand as ConstructorInfo) != null)
