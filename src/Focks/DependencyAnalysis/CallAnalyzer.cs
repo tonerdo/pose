@@ -8,19 +8,19 @@ using static Focks.Utilities;
 
 namespace Focks.DependencyAnalysis
 {
-    internal class Analyzer
+    internal class CallAnalyzer
     {
         private MethodBase _root;
         private CallGraph _callGraph;
 
-        private Analyzer()
+        private CallAnalyzer()
         {
             _callGraph = new CallGraph();
         }
 
-        public static Analyzer CreateAnalyzer(MethodBase root)
+        public static CallAnalyzer CreateAnalyzer(MethodBase root)
         {
-            return new Analyzer { _root = root };
+            return new CallAnalyzer { _root = root };
         }
 
         public CallGraph GenerateCallGraph()

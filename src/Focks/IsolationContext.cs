@@ -7,7 +7,7 @@ namespace Focks
     {
         public IsolationContext(Action entry, params Shim[] shims)
         {
-            Analyzer analyzer = Analyzer.CreateAnalyzer(entry.Method);
+            CallAnalyzer analyzer = CallAnalyzer.CreateAnalyzer(entry.Method);
             CallGraph callGraph = analyzer.GenerateCallGraph();
         }
     }
