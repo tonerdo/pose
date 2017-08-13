@@ -3,11 +3,11 @@ using System.Reflection;
 
 namespace Focks.DependencyAnalysis
 {
-    class CallNode
+    internal class CallNode
     {
         public string Name;
         public MethodBase Method;
-        public List<CallNode> Dependants = new List<CallNode>();
-        public List<CallNode> Dependencies = new List<CallNode>();
+        public CallGraph Dependants = new CallGraph();
+        public CallGraph Dependencies = new CallGraph();
     }
 }
