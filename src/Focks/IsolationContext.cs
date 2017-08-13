@@ -1,4 +1,5 @@
 using System;
+using Focks.DependencyAnalysis;
 
 namespace Focks
 {
@@ -6,7 +7,8 @@ namespace Focks
     {
         public IsolationContext(Action entry, params Shim[] shims)
         {
-            
+            Analyzer analyzer = Analyzer.CreateAnalyzer(entry.Method);
+            CallGraph callGraph = analyzer.GenerateCallGraph();
         }
     }
 }

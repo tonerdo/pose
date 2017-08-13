@@ -5,9 +5,9 @@ namespace Focks.DependencyAnalysis
 {
     internal class CallNode
     {
-        public string Name;
-        public MethodBase Method;
-        public CallGraph Dependants = new CallGraph();
-        public CallGraph Dependencies = new CallGraph();
+        public string Name { get; set; }
+        public MethodBase Method { get; set; }
+        public CallGraph Dependants { get; set; } = new CallGraph();
+        public CallGraph Dependencies { get; set; } = new CallGraph();
     }
 }
