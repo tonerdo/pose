@@ -7,10 +7,10 @@ namespace Focks
 {
     public class Shim
     {
-        protected MethodInfo _original;
+        protected MethodBase _original;
         protected Delegate _replacement;
 
-        internal Shim(MethodInfo original, Delegate replacement)
+        internal Shim(MethodBase original, Delegate replacement)
         {
             _original = original;
             _replacement = replacement;
@@ -21,6 +21,7 @@ namespace Focks
             MethodCallExpression methodCall = original.Body as MethodCallExpression;
             return new Shim(methodCall.Method, null);
         }
+
         public static Shim Replace<T>(Expression<Func<T>> original)
         {
             return new Shim(GetMethodFromExpression(original.Body), null);
@@ -35,7 +36,7 @@ namespace Focks
             return this;
         }
 
-        private static MethodInfo GetMethodFromExpression(Expression expression)
+        private static MethodBase GetMethodFromExpression(Expression expression)
         {
             switch (expression.NodeType)
             {
@@ -48,19 +49,19 @@ namespace Focks
                         return propertyInfo.GetGetMethod();
                     }
                     else
-                        throw new NotImplementedException();
+                        throw new NotImplementedException("Unsupported expression");
                 case ExpressionType.Call:
                     MethodCallExpression methodCall = expression as MethodCallExpression;
                     return methodCall.Method;
                 default:
-                    throw new NotImplementedException();
+                    throw new NotImplementedException("Unsupported expression");
             }
         }
 
-        private bool SignatureEquals(MethodInfo m1, MethodInfo m2)
+        private bool SignatureEquals(MethodBase m1, MethodInfo m2)
         {
             string signature1 = string.Format("{0}({1})",
-                m1.ReturnType,
+                m1.IsConstructor ? m1.DeclaringType : (m1 as MethodInfo).ReturnType,
                 string.Join<Type>(",", m1.GetParameters().Select(p => p.ParameterType)));
 
             string signature2 = string.Format("{0}({1})",
