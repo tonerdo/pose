@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 
-using Mono.Reflection;
+using Focks.IL;
 using static Focks.Utilities;
 
 namespace Focks.DependencyAnalysis
@@ -31,6 +31,14 @@ namespace Focks.DependencyAnalysis
             return _callGraph;
         }
 
+        public CallGraph GenerateCallSubGraph(List<CallNode> nodes)
+        {
+            foreach (CallNode node in nodes)
+                GetDependantNodesForNode(node);
+            
+            return _subGraph;
+        }
+
         private CallNode GetNodeFromGraph(MethodBase method) => _callGraph.FirstOrDefault(n => n.Name == BuildMethodString(method));
 
         private void GetDependencyNode(MethodBase method, CallNode parentNode)
@@ -54,36 +62,17 @@ namespace Focks.DependencyAnalysis
             parentNode?.Dependencies.Add(node);
             _callGraph.Add(node);
 
-            IList<Instruction> instructions = null;
+            MethodDisassembler disassembler = new MethodDisassembler(method);
+            List<MethodBase> dependencies = null;
+
             try
             {
-                instructions = method.GetInstructions();
+                dependencies = disassembler.GetMethodDependencies();
             }
             catch { return; }
 
-            var methodCalls = GetMethodCalls(instructions);
-
-            foreach (var methodCall in methodCalls)
-            {
-                if (methodCall.MemberType == MemberTypes.Constructor)
-                {
-                    ConstructorInfo constructorInfo = methodCall as ConstructorInfo;
-                    GetDependencyNode(constructorInfo, node);
-                }
-                else
-                {
-                    MethodInfo methodInfo = methodCall as MethodInfo;
-                    GetDependencyNode(methodInfo, node);
-                }
-            }
-        }
-
-        public CallGraph GenerateCallSubGraph(List<CallNode> nodes)
-        {
-            foreach (CallNode node in nodes)
-                GetDependantNodesForNode(node);
-            
-            return _subGraph;
+            foreach (var dependency in dependencies)
+                GetDependencyNode(dependency, node);
         }
 
         private void GetDependantNodesForNode(CallNode node)
@@ -96,15 +85,6 @@ namespace Focks.DependencyAnalysis
                     GetDependantNodesForNode(dep);
                 }
             }
-        }
-
-        private IEnumerable<MemberInfo> GetMethodCalls(IList<Instruction> instructions)
-        {
-            var methodCalls = instructions
-                .Where(i => (i.Operand as MethodInfo) != null || (i.Operand as ConstructorInfo) != null)
-                .Select(i => (i.Operand as MemberInfo));
-
-            return methodCalls;
         }
     }
 }

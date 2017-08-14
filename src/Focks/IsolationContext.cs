@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Focks.DependencyAnalysis;
 
+using Focks.DependencyAnalysis;
 using static Focks.Utilities;
 
 namespace Focks
