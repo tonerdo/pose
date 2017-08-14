@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Focks.DependencyAnalysis;
-using static Focks.Utilities;
+using Focks.Extensions;
 
 namespace Focks
 {
@@ -17,7 +17,7 @@ namespace Focks
             List<CallNode> shimNodes = new List<CallNode>();
             foreach (var shim in shims)
             {
-                CallNode node = callGraph.FirstOrDefault(g => g.Name == BuildMethodString(shim.Original));
+                CallNode node = callGraph.FirstOrDefault(g => g.Name == shim.Original.ToFullString());
                 if (node != null)
                     shimNodes.Add(node);
             }

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 
 using Focks.IL;
-using static Focks.Utilities;
+using Focks.Extensions;
 
 namespace Focks.DependencyAnalysis
 {
@@ -36,7 +36,7 @@ namespace Focks.DependencyAnalysis
             return callGraph;
         }
 
-        private CallNode GetNodeFromGraph(CallGraph callGraph, MethodBase method) => callGraph.FirstOrDefault(n => n.Name == BuildMethodString(method));
+        private CallNode GetNodeFromGraph(CallGraph callGraph, MethodBase method) => callGraph.FirstOrDefault(n => n.Name == method.ToFullString());
 
         private void GetDependencyNode(CallGraph callGraph, MethodBase method, CallNode parentNode)
         {
@@ -52,7 +52,7 @@ namespace Focks.DependencyAnalysis
                 return;
             }
 
-            node = new CallNode { Name = BuildMethodString(method), Method = method };
+            node = new CallNode { Name = method.ToFullString(), Method = method };
             if (parentNode != null)
                 node.Dependants.Add(parentNode);
 

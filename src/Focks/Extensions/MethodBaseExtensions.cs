@@ -1,11 +1,11 @@
 using System;
 using System.Reflection;
 
-namespace Focks
+namespace Focks.Extensions
 {
-    internal static class Utilities
+    internal static class MethodBaseExtensions
     {
-        internal static string BuildMethodString(MethodBase methodBase)
+        public static string ToFullString(this MethodBase methodBase)
         {
             Type declaringType = methodBase.DeclaringType;
             return $"[{declaringType.Assembly.GetName().Name}]{declaringType.FullName}::{methodBase.ToString()}";
