@@ -22,7 +22,7 @@ namespace Focks
                     shimNodes.Add(node);
             }
 
-            CallGraph subGraph = analyzer.GenerateCallSubGraph(shimNodes);
+            CallGraph subGraph = analyzer.GenerateCallGraph(shimNodes);
         }
     }
 }
