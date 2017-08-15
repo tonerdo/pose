@@ -6,7 +6,7 @@ namespace Focks.Extensions
 {
     internal static class DictionaryExtensions
     {
-        public static bool TryAdd(this Dictionary<int, Label> dictionary, int key, Label value)
+        public static bool TryAdd<T, U>(this Dictionary<T, U> dictionary, T key, U value)
         {
             try
             {
