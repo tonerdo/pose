@@ -15,11 +15,14 @@ namespace Focks.IL
             _method = method;
         }
 
+        public List<Instruction> GetILInstructions()
+        {
+            return _method.GetInstructions().ToList();
+        }
 
         public List<MethodBase> GetMethodDependencies()
         {
-            IList<Instruction> instructions = _method.GetInstructions();
-            var methodDependencies = instructions
+            var methodDependencies = GetILInstructions()
                 .Where(i => (i.Operand as MethodInfo) != null || (i.Operand as ConstructorInfo) != null)
                 .Select(i => (i.Operand as MethodBase));
 
