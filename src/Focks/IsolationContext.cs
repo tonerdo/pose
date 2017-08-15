@@ -4,6 +4,7 @@ using System.Linq;
 
 using Focks.DependencyAnalysis;
 using Focks.Extensions;
+using Focks.IL;
 
 namespace Focks
 {
@@ -23,6 +24,15 @@ namespace Focks
             }
 
             CallGraph subGraph = analyzer.GenerateCallGraph(shimNodes);
+            CallGraphRewriter rewriter = CallGraphRewriter.CreateRewriter(subGraph, shims);
+            var entrypoint = rewriter.Rewrite();
+
+            object[] args = new object[shims.Length + 1];
+            args[0] = entry.Target;
+            for (int i = 0; i < shims.Length; i++)
+                args[i + 1] = shims[i].Replacement.Target;
+
+            entrypoint.Invoke(null, args);
         }
     }
 }
