@@ -55,6 +55,8 @@ namespace Focks.DependencyAnalysis
             node = new CallNode { Name = method.ToFullString(), Method = method };
             if (parentNode != null)
                 node.Dependants.Add(parentNode);
+            else
+                node.Root = true;
 
             parentNode?.Dependencies.Add(node);
             callGraph.Add(node);
