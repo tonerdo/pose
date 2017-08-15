@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reflection;
 
 namespace Focks.Extensions
@@ -10,5 +11,8 @@ namespace Focks.Extensions
             Type declaringType = methodBase.DeclaringType;
             return $"[{declaringType.Assembly.GetName().Name}]{declaringType.FullName}::{methodBase.ToString()}";
         }
+
+        public static bool HasShim(this MethodBase method, Shim[] shims)
+            => shims.Select(s => s.Original.ToFullString()).Contains(method.ToFullString());
     }
 }

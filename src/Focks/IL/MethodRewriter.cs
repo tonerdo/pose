@@ -26,9 +26,6 @@ namespace Focks.IL
             return new MethodRewriter { _method = shim.Replacement.Method, _shim = shim };
         }
 
-        private bool HasShim(Shim[] shims, MethodBase method)
-            => shims.Select(s => s.Original.ToFullString()).Contains(method.ToFullString());
-
         public DynamicMethod RewriteMethodSignature(Shim[] shims)
         {
             ParameterInfo[] parameters = _method.GetParameters();
@@ -190,7 +187,7 @@ namespace Focks.IL
                             {
                                 if (_shim == null)
                                 {
-                                    if (!HasShim(shims, constructorInfo))
+                                    if (!constructorInfo.HasShim(shims))
                                     {
                                         int parameterCount = dynamicMethod.GetParameters().Count();
                                         int startIndex = parameterCount - shims.Length;
@@ -219,7 +216,7 @@ namespace Focks.IL
                             {
                                 if (_shim == null)
                                 {
-                                    if (!HasShim(shims, methodInfo))
+                                    if (!methodInfo.HasShim(shims))
                                     {
                                         int parameterCount = dynamicMethod.GetParameters().Count();
                                         int startIndex = parameterCount - shims.Length;
