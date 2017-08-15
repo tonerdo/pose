@@ -11,12 +11,13 @@ namespace Focks.DependencyAnalysis
     internal class CallAnalyzer
     {
         private MethodBase _root;
+        private Shim[] _shims;
 
         private CallAnalyzer() { }
 
-        public static CallAnalyzer CreateAnalyzer(MethodBase root)
+        public static CallAnalyzer CreateAnalyzer(MethodBase root, Shim[] shims)
         {
-            return new CallAnalyzer { _root = root };
+            return new CallAnalyzer { _root = root, _shims = shims };
         }
 
         public CallGraph GenerateCallGraph()
@@ -60,6 +61,9 @@ namespace Focks.DependencyAnalysis
 
             parentNode?.Dependencies.Add(node);
             callGraph.Add(node);
+
+            if (node.Method.HasShim(_shims))
+                return;
 
             MethodDisassembler disassembler = new MethodDisassembler(method);
             List<MethodBase> dependencies = null;
