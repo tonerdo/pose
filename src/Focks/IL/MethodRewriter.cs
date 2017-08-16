@@ -180,14 +180,14 @@ namespace Focks.IL
                             TypeInfo typeInfo = (MemberInfo)instruction.Operand as TypeInfo;
                             ilGenerator.Emit(instruction.OpCode, typeInfo);
                         }
-                        else if (memberInfo.MemberType == MemberTypes.Constructor)
+                        else if (memberInfo is MethodBase)
                         {
-                            ConstructorInfo constructorInfo = (MemberInfo)instruction.Operand as ConstructorInfo;
-                            if (signatures.TryGetValue(constructorInfo.ToFullString(), out DynamicMethod dynMethod))
+                            MethodBase methodBase = (MemberInfo)instruction.Operand as MethodBase;
+                            if (signatures.TryGetValue(methodBase.ToFullString(), out DynamicMethod dynMethod))
                             {
                                 if (_shim == null)
                                 {
-                                    if (!constructorInfo.HasShim(shims))
+                                    if (!methodBase.HasShim(shims))
                                     {
                                         int parameterCount = dynamicMethod.GetParameters().Count();
                                         int startIndex = parameterCount - shims.Length;
@@ -198,7 +198,7 @@ namespace Focks.IL
                                     {
                                         int shimIndex = shims.Select(s => s.Original)
                                             .Select(m => m.ToFullString())
-                                            .ToList().IndexOf(constructorInfo.ToFullString());
+                                            .ToList().IndexOf(methodBase.ToFullString());
                                         int parameterCount = dynamicMethod.GetParameters().Count();
                                         int countDiff = parameterCount - shims.Length;
                                         ilGenerator.Emit(OpCodes.Ldarg, (short)(countDiff + shimIndex));
@@ -207,36 +207,12 @@ namespace Focks.IL
                                 ilGenerator.Emit(instruction.OpCode, dynMethod);
                             }
                             else
-                                ilGenerator.Emit(instruction.OpCode, constructorInfo);
-                        }
-                        else if (memberInfo.MemberType == MemberTypes.Method)
-                        {
-                            MethodInfo methodInfo = (MemberInfo)instruction.Operand as MethodInfo;
-                            if (signatures.TryGetValue(methodInfo.ToFullString(), out DynamicMethod dynMethod))
                             {
-                                if (_shim == null)
-                                {
-                                    if (!methodInfo.HasShim(shims))
-                                    {
-                                        int parameterCount = dynamicMethod.GetParameters().Count();
-                                        int startIndex = parameterCount - shims.Length;
-                                        for (int i = startIndex; i < parameterCount; i++)
-                                            ilGenerator.Emit(OpCodes.Ldarg, (short)i);
-                                    }
-                                    else
-                                    {
-                                        int shimIndex = shims.Select(s => s.Original)
-                                            .Select(m => m.ToFullString())
-                                            .ToList().IndexOf(methodInfo.ToFullString());
-                                        int parameterCount = dynamicMethod.GetParameters().Count();
-                                        int countDiff = parameterCount - shims.Length;
-                                        ilGenerator.Emit(OpCodes.Ldarg, (short)(countDiff + shimIndex));
-                                    }
-                                }
-                                ilGenerator.Emit(instruction.OpCode, dynMethod);
+                                if (methodBase.IsConstructor)
+                                    ilGenerator.Emit(instruction.OpCode, methodBase as ConstructorInfo);
+                                else
+                                    ilGenerator.Emit(instruction.OpCode, methodBase as MethodInfo);
                             }
-                            else
-                                ilGenerator.Emit(instruction.OpCode, methodInfo);
                         }
                         else
                         {
