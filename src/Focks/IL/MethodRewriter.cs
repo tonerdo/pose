@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 using Focks.Extensions;
+using Focks.Helpers;
 using Mono.Reflection;
 
 namespace Focks.IL
@@ -359,7 +360,7 @@ namespace Focks.IL
 
                                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                                 ilGenerator.Emit(OpCodes.Ldc_I4, methodInfo.MetadataToken);
-                                ilGenerator.Emit(OpCodes.Ldstr, GetMethodTypeArguments(methodInfo));
+                                ilGenerator.Emit(OpCodes.Ldstr, StubHelper.GetMethodTypeArguments(methodInfo));
 
                                 ilGenerator.Emit(instruction.OpCode, stub);
                             }
@@ -379,17 +380,6 @@ namespace Focks.IL
             }
 
             return dynamicMethod;
-        }
-
-        private string GetMethodTypeArguments(MethodInfo methodInfo)
-        {
-            if (!methodInfo.IsGenericMethod)
-                return string.Empty;
-
-            string name = "[";
-            name += string.Join<Type>(",", methodInfo.GetGenericArguments());
-            name += "]";
-            return name;
         }
 
         public DynamicMethod GenerateStub(MethodInfo methodInfo)
@@ -419,7 +409,7 @@ namespace Focks.IL
             for (int i = count; i < parameterTypes.Count; i++)
                 ilGenerator.Emit(OpCodes.Ldarg, i);
 
-            ilGenerator.Emit(OpCodes.Call, typeof(Utils).GetMethod("FindMethod"));
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("FindMethod"));
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
@@ -428,7 +418,7 @@ namespace Focks.IL
             for (int i = 0; i < count; i++)
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.Emit(OpCodes.Call, typeof(Utils).GetMethod("GetMethodPointer"));
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
             ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
             ilGenerator.Emit(OpCodes.Ret);
             return stub;

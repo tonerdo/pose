@@ -1,12 +1,24 @@
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Focks.IL
+namespace Focks.Helpers
 {
-    internal class Utils
+    internal class StubHelper
     {
+        public static string GetMethodTypeArguments(MethodInfo methodInfo)
+        {
+            if (!methodInfo.IsGenericMethod)
+                return string.Empty;
+
+            string name = "[";
+            name += string.Join<Type>(",", methodInfo.GetGenericArguments());
+            name += "]";
+            return name;
+        }
+
         public static MethodInfo FindMethod(Type type, int metadataToken, string genericArguments)
         {
             MethodInfo method = type.Module.ResolveMember(metadataToken) as MethodInfo;
@@ -44,7 +56,7 @@ namespace Focks.IL
             return typeArguments;
         }
 
-        public static Type FindType(Assembly assembly, string type)
+        private static Type FindType(Assembly assembly, string type)
         {
             Type t = assembly.GetType(type);
             if (t != null)
