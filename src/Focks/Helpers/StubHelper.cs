@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 
 namespace Focks.Helpers
 {
-    internal class StubHelper
+    internal static class StubHelper
     {
         public static string GetMethodTypeArguments(MethodInfo methodInfo)
         {

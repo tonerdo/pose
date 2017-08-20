@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Focks.Helpers
 {
-    internal class ShimHelper
+    internal static class ShimHelper
     {
         public static MethodBase GetMethodFromExpression(Expression expression)
         {
