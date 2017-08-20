@@ -150,12 +150,18 @@ namespace Focks.IL
                             if (instruction.OpCode == OpCodes.Call)
                             {
                                 DynamicMethod stub = Stubs.GenerateStubForMethod(methodInfo);
-
                                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                                 ilGenerator.Emit(OpCodes.Ldc_I4, methodInfo.MetadataToken);
                                 ilGenerator.Emit(OpCodes.Ldstr, StubHelper.GetMethodTypeArguments(methodInfo));
-
                                 ilGenerator.Emit(instruction.OpCode, stub);
+                            }
+                            else if (instruction.OpCode == OpCodes.Ldftn)
+                            {
+                                DynamicMethod stub = Stubs.GenerateStubForMethodPointer(methodInfo);
+                                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+                                ilGenerator.Emit(OpCodes.Ldc_I4, methodInfo.MetadataToken);
+                                ilGenerator.Emit(OpCodes.Ldstr, StubHelper.GetMethodTypeArguments(methodInfo));
+                                ilGenerator.Emit(OpCodes.Call, stub);
                             }
                             else
                             {
