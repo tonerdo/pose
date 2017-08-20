@@ -397,17 +397,19 @@ namespace Focks.IL
             ParameterInfo[] parameters = methodInfo.GetParameters();
             int count = parameters.Length + (methodInfo.IsStatic ? 0 : 1);
 
+            List<Type> signatureParamTypes = new List<Type>();
             List<Type> parameterTypes = new List<Type>();
             if (!methodInfo.IsStatic)
-                parameterTypes.Add(methodInfo.DeclaringType);
+                signatureParamTypes.Add(methodInfo.DeclaringType);
 
-            parameterTypes.AddRange(parameters.Select(p => p.ParameterType));
+            signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
+            parameterTypes.AddRange(signatureParamTypes);
             parameterTypes.Add(typeof(Type));
             parameterTypes.Add(typeof(int));
             parameterTypes.Add(typeof(string));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
+                string.Format("dynamic_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 methodInfo.ReturnType,
                 parameterTypes.ToArray());
 
@@ -427,9 +429,8 @@ namespace Focks.IL
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(Utils).GetMethod("GetMethodPointer"));
-            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, parameters.Select(p => p.ParameterType).ToArray(), null);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
             ilGenerator.Emit(OpCodes.Ret);
-
             return stub;
         }
     }
