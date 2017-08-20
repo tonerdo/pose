@@ -3,6 +3,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
+using Focks.Helpers;
+
 namespace Focks
 {
     public class Shim
@@ -40,12 +42,12 @@ namespace Focks
 
         public static Shim Replace<T>(Expression<Func<T>> original)
         {
-            return new Shim(GetMethodFromExpression(original.Body), null);
+            return new Shim(ShimHelper.GetMethodFromExpression(original.Body), null);
         }
 
         private Shim WithImpl(Delegate replacement)
         {
-            if (!SignatureEquals(_original, replacement.Method))
+            if (!ShimHelper.SignatureEquals(_original, replacement.Method))
                 throw new Exception("Signature mismatch");
 
             _replacement = replacement;
@@ -109,40 +111,5 @@ namespace Focks
         
         public Shim With<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> replacement)
             => WithImpl(replacement);
-
-        private static MethodBase GetMethodFromExpression(Expression expression)
-        {
-            switch (expression.NodeType)
-            {
-                case ExpressionType.MemberAccess:
-                    MemberExpression memberExpression = expression as MemberExpression;
-                    MemberInfo memberInfo = memberExpression.Member;
-                    if (memberInfo.MemberType == MemberTypes.Property)
-                    {
-                        PropertyInfo propertyInfo = memberInfo as PropertyInfo;
-                        return propertyInfo.GetGetMethod();
-                    }
-                    else
-                        throw new NotImplementedException("Unsupported expression");
-                case ExpressionType.Call:
-                    MethodCallExpression methodCall = expression as MethodCallExpression;
-                    return methodCall.Method;
-                default:
-                    throw new NotImplementedException("Unsupported expression");
-            }
-        }
-
-        private bool SignatureEquals(MethodBase m1, MethodInfo m2)
-        {
-            string signature1 = string.Format("{0}({1})",
-                m1.IsConstructor ? m1.DeclaringType : (m1 as MethodInfo).ReturnType,
-                string.Join<Type>(",", m1.GetParameters().Select(p => p.ParameterType)));
-
-            string signature2 = string.Format("{0}({1})",
-                m2.ReturnType,
-                string.Join<Type>(",", m2.GetParameters().Select(p => p.ParameterType)));
-
-            return signature1 == signature2;
-        }
     }
 }
