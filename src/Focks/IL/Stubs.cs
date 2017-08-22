@@ -13,7 +13,6 @@ namespace Focks.IL
         public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
         {
             ParameterInfo[] parameters = methodInfo.GetParameters();
-            int count = parameters.Length + (methodInfo.IsStatic ? 0 : 1);
 
             List<Type> signatureParamTypes = new List<Type>();
             List<Type> parameterTypes = new List<Type>();
@@ -22,9 +21,7 @@ namespace Focks.IL
 
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.AddRange(signatureParamTypes);
-            parameterTypes.Add(typeof(Type));
-            parameterTypes.Add(typeof(int));
-            parameterTypes.Add(typeof(string));
+            parameterTypes.Add(typeof(RuntimeMethodHandle));
 
             DynamicMethod stub = new DynamicMethod(
                 string.Format("dynamic_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
@@ -34,16 +31,15 @@ namespace Focks.IL
             ILGenerator ilGenerator = stub.GetILGenerator();
             ilGenerator.DeclareLocal(typeof(MethodInfo));
 
-            for (int i = count; i < parameterTypes.Count; i++)
-                ilGenerator.Emit(OpCodes.Ldarg, i);
-
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("FindMethod"));
+            ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
             ilGenerator.Emit(OpCodes.Callvirt, typeof(MethodRewriter).GetMethod("Rewrite"));
             ilGenerator.Emit(OpCodes.Stloc_0);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < signatureParamTypes.Count; i++)
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
@@ -55,9 +51,7 @@ namespace Focks.IL
         public static DynamicMethod GenerateStubForMethodPointer(MethodInfo methodInfo)
         {
             List<Type> parameterTypes = new List<Type>();
-            parameterTypes.Add(typeof(Type));
-            parameterTypes.Add(typeof(int));
-            parameterTypes.Add(typeof(string));
+            parameterTypes.Add(typeof(RuntimeMethodHandle));
 
             DynamicMethod stub = new DynamicMethod(
                 string.Format("dynamic_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
@@ -67,10 +61,9 @@ namespace Focks.IL
             ILGenerator ilGenerator = stub.GetILGenerator();
             ilGenerator.DeclareLocal(typeof(MethodInfo));
 
-            for (int i = 0; i < parameterTypes.Count; i++)
-                ilGenerator.Emit(OpCodes.Ldarg, i);
-
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("FindMethod"));
+            ilGenerator.Emit(OpCodes.Ldarg, 0);
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
