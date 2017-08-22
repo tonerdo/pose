@@ -29,7 +29,12 @@ namespace Focks.IL
 
             List<Type> parameterTypes = new List<Type>();
             if (!_method.IsStatic)
-                parameterTypes.Add(_method.DeclaringType);
+            {
+                if (_method.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                    parameterTypes.Add(_method.DeclaringType.MakeByRefType());
+                else
+                    parameterTypes.Add(_method.DeclaringType);
+            }
 
             parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
             DynamicMethod dynamicMethod = new DynamicMethod(
