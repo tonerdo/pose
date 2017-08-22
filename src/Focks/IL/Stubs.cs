@@ -17,7 +17,12 @@ namespace Focks.IL
             List<Type> signatureParamTypes = new List<Type>();
             List<Type> parameterTypes = new List<Type>();
             if (!methodInfo.IsStatic)
-                signatureParamTypes.Add(methodInfo.DeclaringType);
+            {
+                if (methodInfo.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                    signatureParamTypes.Add(methodInfo.DeclaringType.MakeByRefType());
+                else
+                    signatureParamTypes.Add(methodInfo.DeclaringType);
+            }
 
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.AddRange(signatureParamTypes);
