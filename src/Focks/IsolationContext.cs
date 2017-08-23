@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Reflection;
 using Focks.IL;
 
 namespace Focks
@@ -12,7 +12,7 @@ namespace Focks
         {
             Type delegateType = typeof(Action<>).MakeGenericType(entryPoint.Target.GetType());
             MethodRewriter rewriter = MethodRewriter.CreateRewriter(entryPoint.Method);
-            rewriter.Rewrite().CreateDelegate(delegateType).DynamicInvoke(entryPoint.Target);
+            ((MethodInfo)(rewriter.Rewrite())).CreateDelegate(delegateType).DynamicInvoke(entryPoint.Target);
         }
     }
 }

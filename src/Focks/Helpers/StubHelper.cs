@@ -8,15 +8,15 @@ namespace Focks.Helpers
 {
     internal static class StubHelper
     {
-        public static IntPtr GetMethodPointer(MethodInfo methodInfo)
+        public static IntPtr GetMethodPointer(MethodBase methodBase)
         {
-            if (methodInfo is DynamicMethod)
+            if (methodBase is DynamicMethod)
             {
                 var methodDescriptior = typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.Instance | BindingFlags.NonPublic);
-                return ((RuntimeMethodHandle)methodDescriptior.Invoke(methodInfo as DynamicMethod, null)).GetFunctionPointer();
+                return ((RuntimeMethodHandle)methodDescriptior.Invoke(methodBase as DynamicMethod, null)).GetFunctionPointer();
             }
 
-            return methodInfo.MethodHandle.GetFunctionPointer();
+            return methodBase.MethodHandle.GetFunctionPointer();
         }
     }
 }

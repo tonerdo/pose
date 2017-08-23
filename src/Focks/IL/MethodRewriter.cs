@@ -21,11 +21,11 @@ namespace Focks.IL
             return new MethodRewriter { _method = method };
         }
 
-        public MethodInfo Rewrite()
+        public MethodBase Rewrite()
         {
             MethodBody methodBody = _method.GetMethodBody();
             if (methodBody == null)
-                return _method as MethodInfo;
+                return _method;
 
             List<Type> parameterTypes = new List<Type>();
             if (!_method.IsStatic)
@@ -38,8 +38,8 @@ namespace Focks.IL
 
             parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
             DynamicMethod dynamicMethod = new DynamicMethod(
-                _method.Name,
-                (_method as MethodInfo).ReturnType,
+                string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
+                _method.IsConstructor ? _method.DeclaringType : (_method as MethodInfo).ReturnType,
                 parameterTypes.ToArray());
 
             MethodDisassembler disassembler = new MethodDisassembler(_method);
@@ -77,6 +77,8 @@ namespace Focks.IL
                 switch (instruction.OpCode.OperandType)
                 {
                     case OperandType.InlineNone:
+                        if (instruction.OpCode == OpCodes.Ret && _method.IsConstructor)
+                            ilGenerator.Emit(OpCodes.Ldarg_0);
                         ilGenerator.Emit(instruction.OpCode);
                         break;
                     case OperandType.InlineI:
@@ -147,7 +149,17 @@ namespace Focks.IL
                         else if (memberInfo.MemberType == MemberTypes.Constructor)
                         {
                             ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
-                            ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                            if (instruction.OpCode == OpCodes.Newobj)
+                            {
+                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForConstructor(constructorInfo));
+                            }
+                            else
+                            {
+                                // call  instance void [System.Runtime]System.Object::.ctor()
+                                ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                            }
+                            
                         }
                         else if (memberInfo.MemberType == MemberTypes.Method)
                         {
