@@ -167,7 +167,7 @@ namespace Focks.IL
 
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-                            if (instruction.OpCode == OpCodes.Call)
+                            if (constructorInfo.IsForValueType())
                                 ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
                             else
                                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
