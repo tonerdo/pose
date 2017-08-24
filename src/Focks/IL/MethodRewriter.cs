@@ -36,10 +36,14 @@ namespace Focks.IL
                     parameterTypes.Add(_method.DeclaringType);
             }
 
+            Type returnType = _method.IsConstructor ? _method.DeclaringType : (_method as MethodInfo).ReturnType;
+            if (_method.IsConstructor && _method.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                returnType = typeof(void);
+
             parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
             DynamicMethod dynamicMethod = new DynamicMethod(
                 string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
-                _method.IsConstructor ? _method.DeclaringType : (_method as MethodInfo).ReturnType,
+                returnType,
                 parameterTypes.ToArray());
 
             MethodDisassembler disassembler = new MethodDisassembler(_method);
@@ -77,7 +81,7 @@ namespace Focks.IL
                 switch (instruction.OpCode.OperandType)
                 {
                     case OperandType.InlineNone:
-                        if (instruction.OpCode == OpCodes.Ret && _method.IsConstructor)
+                        if (instruction.OpCode == OpCodes.Ret && _method.IsConstructor && !_method.DeclaringType.IsSubclassOf(typeof(ValueType)))
                             ilGenerator.Emit(OpCodes.Ldarg_0);
                         ilGenerator.Emit(instruction.OpCode);
                         break;
@@ -149,17 +153,19 @@ namespace Focks.IL
                         else if (memberInfo.MemberType == MemberTypes.Constructor)
                         {
                             ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
-                            if (instruction.OpCode == OpCodes.Newobj)
-                            {
-                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForConstructor(constructorInfo));
-                            }
-                            else
+                            if (constructorInfo.DeclaringType == typeof(Object))
                             {
                                 // call  instance void [System.Runtime]System.Object::.ctor()
                                 ilGenerator.Emit(instruction.OpCode, constructorInfo);
                             }
-                            
+                            else
+                            {
+                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                                if (constructorInfo.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                                    ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
+                                else
+                                    ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
+                            }
                         }
                         else if (memberInfo.MemberType == MemberTypes.Method)
                         {

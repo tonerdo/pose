@@ -54,20 +54,14 @@ namespace Focks.IL
             return stub;
         }
 
-        public static DynamicMethod GenerateStubForConstructor(ConstructorInfo constructorInfo)
+        public static DynamicMethod GenerateStubForRefTypeConstructor(ConstructorInfo constructorInfo)
         {
             ParameterInfo[] parameters = constructorInfo.GetParameters();
 
             List<Type> signatureParamTypes = new List<Type>();
             List<Type> parameterTypes = new List<Type>();
-            if (!constructorInfo.IsStatic)
-            {
-                if (constructorInfo.DeclaringType.IsSubclassOf(typeof(ValueType)))
-                    signatureParamTypes.Add(constructorInfo.DeclaringType.MakeByRefType());
-                else
-                    signatureParamTypes.Add(constructorInfo.DeclaringType);
-            }
 
+            signatureParamTypes.Add(constructorInfo.DeclaringType);
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.Add(typeof(RuntimeMethodHandle));
@@ -99,6 +93,45 @@ namespace Focks.IL
             ilGenerator.Emit(OpCodes.Ldloc_2);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
             ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, constructorInfo.DeclaringType, signatureParamTypes.ToArray(), null);
+            ilGenerator.Emit(OpCodes.Ret);
+            return stub;
+        }
+
+        public static DynamicMethod GenerateStubForValTypeConstructor(ConstructorInfo constructorInfo)
+        {
+            ParameterInfo[] parameters = constructorInfo.GetParameters();
+
+            List<Type> signatureParamTypes = new List<Type>();
+            List<Type> parameterTypes = new List<Type>();
+
+            signatureParamTypes.Add(constructorInfo.DeclaringType.MakeByRefType());
+            signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
+            parameterTypes.AddRange(signatureParamTypes);
+            parameterTypes.Add(typeof(RuntimeMethodHandle));
+
+            DynamicMethod stub = new DynamicMethod(
+                string.Format("stub_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
+                typeof(void),
+                parameterTypes.ToArray());
+
+            ILGenerator ilGenerator = stub.GetILGenerator();
+            ilGenerator.DeclareLocal(typeof(ConstructorInfo));
+            ilGenerator.DeclareLocal(typeof(MethodInfo));
+
+            ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            ilGenerator.Emit(OpCodes.Castclass, typeof(ConstructorInfo));
+            ilGenerator.Emit(OpCodes.Stloc_0);
+            ilGenerator.Emit(OpCodes.Ldloc_0);
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
+            ilGenerator.Emit(OpCodes.Callvirt, typeof(MethodRewriter).GetMethod("Rewrite"));
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+            ilGenerator.Emit(OpCodes.Stloc_1);
+            for (int i = 0; i < signatureParamTypes.Count; i++)
+                ilGenerator.Emit(OpCodes.Ldarg, i);
+            ilGenerator.Emit(OpCodes.Ldloc_1);
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, typeof(void), signatureParamTypes.ToArray(), null);
             ilGenerator.Emit(OpCodes.Ret);
             return stub;
         }
