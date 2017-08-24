@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using Focks.Extensions;
 using Focks.Helpers;
 
 namespace Focks.IL
@@ -18,7 +19,7 @@ namespace Focks.IL
             List<Type> parameterTypes = new List<Type>();
             if (!methodInfo.IsStatic)
             {
-                if (methodInfo.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                if (methodInfo.IsForValueType())
                     signatureParamTypes.Add(methodInfo.DeclaringType.MakeByRefType());
                 else
                     signatureParamTypes.Add(methodInfo.DeclaringType);

@@ -30,14 +30,14 @@ namespace Focks.IL
             List<Type> parameterTypes = new List<Type>();
             if (!_method.IsStatic)
             {
-                if (_method.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                if (_method.IsForValueType())
                     parameterTypes.Add(_method.DeclaringType.MakeByRefType());
                 else
                     parameterTypes.Add(_method.DeclaringType);
             }
 
             Type returnType = _method.IsConstructor ? _method.DeclaringType : (_method as MethodInfo).ReturnType;
-            if (_method.IsConstructor && _method.DeclaringType.IsSubclassOf(typeof(ValueType)))
+            if (_method.IsConstructor && _method.IsForValueType())
                 returnType = typeof(void);
 
             parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
@@ -81,7 +81,8 @@ namespace Focks.IL
                 switch (instruction.OpCode.OperandType)
                 {
                     case OperandType.InlineNone:
-                        if (instruction.OpCode == OpCodes.Ret && _method.IsConstructor && !_method.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                        if (instruction.OpCode == OpCodes.Ret
+                            && _method.IsConstructor && !_method.IsForValueType())
                             ilGenerator.Emit(OpCodes.Ldarg_0);
                         ilGenerator.Emit(instruction.OpCode);
                         break;
@@ -161,7 +162,7 @@ namespace Focks.IL
                             else
                             {
                                 ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-                                if (constructorInfo.DeclaringType.IsSubclassOf(typeof(ValueType)))
+                                if (constructorInfo.IsForValueType())
                                     ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
                                 else
                                     ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
