@@ -23,10 +23,6 @@ namespace Focks.IL
 
         public MethodBase Rewrite()
         {
-            MethodBody methodBody = _method.GetMethodBody();
-            if (methodBody == null)
-                return _method;
-
             List<Type> parameterTypes = new List<Type>();
             if (!_method.IsStatic)
             {
@@ -47,7 +43,7 @@ namespace Focks.IL
                 parameterTypes.ToArray());
 
             MethodDisassembler disassembler = new MethodDisassembler(_method);
-            IList<LocalVariableInfo> locals = methodBody.LocalVariables;
+            IList<LocalVariableInfo> locals = _method.GetMethodBody().LocalVariables;
             ILGenerator ilGenerator = dynamicMethod.GetILGenerator();
 
             var instructions = disassembler.GetILInstructions();
@@ -154,24 +150,38 @@ namespace Focks.IL
                         else if (memberInfo.MemberType == MemberTypes.Constructor)
                         {
                             ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
+
+                            MethodBody methodBody = constructorInfo.GetMethodBody();
+                            if (methodBody == null)
+                            {
+                                ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                                continue;
+                            }
+
                             if (constructorInfo.DeclaringType == typeof(Object))
                             {
                                 // call  instance void [System.Runtime]System.Object::.ctor()
                                 ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                                continue;
                             }
+
+                            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
+                            if (instruction.OpCode == OpCodes.Call)
+                                ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
                             else
-                            {
-                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-                                if (constructorInfo.IsForValueType())
-                                    ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
-                                else
-                                    ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
-                            }
+                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
                         }
                         else if (memberInfo.MemberType == MemberTypes.Method)
                         {
                             MethodInfo methodInfo = memberInfo as MethodInfo;
+                            MethodBody methodBody = methodInfo.GetMethodBody();
+                            if (methodBody == null)
+                            {
+                                ilGenerator.Emit(instruction.OpCode, methodInfo);
+                                continue;
+                            }
+
                             if (instruction.OpCode == OpCodes.Call)
                             {
                                 DynamicMethod stub = Stubs.GenerateStubForMethod(methodInfo);
