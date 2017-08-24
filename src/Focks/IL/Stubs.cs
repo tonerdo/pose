@@ -66,6 +66,7 @@ namespace Focks.IL
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.Add(typeof(RuntimeMethodHandle));
+            parameterTypes.Add(typeof(RuntimeTypeHandle));
 
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
@@ -79,8 +80,9 @@ namespace Focks.IL
 
             ilGenerator.Emit(OpCodes.Newobj, typeof(Object).GetConstructor(Type.EmptyTypes));
             ilGenerator.Emit(OpCodes.Stloc_0);
+            ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 2);
             ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
-            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
             ilGenerator.Emit(OpCodes.Castclass, typeof(ConstructorInfo));
             ilGenerator.Emit(OpCodes.Stloc_1);
             ilGenerator.Emit(OpCodes.Ldloc_1);
@@ -109,6 +111,7 @@ namespace Focks.IL
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
             parameterTypes.AddRange(signatureParamTypes);
             parameterTypes.Add(typeof(RuntimeMethodHandle));
+            parameterTypes.Add(typeof(RuntimeTypeHandle));
 
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
@@ -119,8 +122,9 @@ namespace Focks.IL
             ilGenerator.DeclareLocal(typeof(ConstructorInfo));
             ilGenerator.DeclareLocal(typeof(MethodInfo));
 
+            ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 2);
             ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
-            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
             ilGenerator.Emit(OpCodes.Castclass, typeof(ConstructorInfo));
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);

@@ -162,6 +162,7 @@ namespace Focks.IL
                             else
                             {
                                 ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
                                 if (constructorInfo.IsForValueType())
                                     ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
                                 else
