@@ -126,7 +126,6 @@ namespace Focks.IL
             ilGenerator.DeclareLocal(constructorInfo.DeclaringType);
             ilGenerator.DeclareLocal(typeof(ConstructorInfo));
             ilGenerator.DeclareLocal(typeof(MethodInfo));
-            ilGenerator.DeclareLocal(constructorInfo.DeclaringType);
 
             if (opCode == OpCodes.Newobj)
             {
@@ -155,11 +154,7 @@ namespace Focks.IL
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
             ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, typeof(void), signatureParamTypes.ToArray(), null);
             if (opCode == OpCodes.Newobj)
-            {
                 ilGenerator.Emit(OpCodes.Ldloc_0);
-                ilGenerator.Emit(OpCodes.Stloc_3);
-                ilGenerator.Emit(OpCodes.Ldloc_3);
-            }
             ilGenerator.Emit(OpCodes.Ret);
             return stub;
         }
