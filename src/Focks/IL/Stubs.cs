@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.Serialization;
 
 using Focks.Extensions;
 using Focks.Helpers;
@@ -78,7 +79,9 @@ namespace Focks.IL
             ilGenerator.DeclareLocal(typeof(ConstructorInfo));
             ilGenerator.DeclareLocal(typeof(MethodInfo));
 
-            ilGenerator.Emit(OpCodes.Newobj, typeof(Object).GetConstructor(Type.EmptyTypes));
+            ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
+            ilGenerator.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle"));
+            ilGenerator.Emit(OpCodes.Call, typeof(FormatterServices).GetMethod("GetUninitializedObject"));
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 2);
             ilGenerator.Emit(OpCodes.Ldarg, parameterTypes.Count - 1);
