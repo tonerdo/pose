@@ -95,7 +95,8 @@ namespace Focks.IL
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             ilGenerator.Emit(OpCodes.Ldloc_2);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
-            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, constructorInfo.DeclaringType, signatureParamTypes.ToArray(), null);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, typeof(void), signatureParamTypes.ToArray(), null);
+            ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Ret);
             return stub;
         }

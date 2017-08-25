@@ -32,11 +32,9 @@ namespace Focks.IL
                     parameterTypes.Add(_method.DeclaringType);
             }
 
-            Type returnType = _method.IsConstructor ? _method.DeclaringType : (_method as MethodInfo).ReturnType;
-            if (_method.IsConstructor && _method.IsForValueType())
-                returnType = typeof(void);
-
             parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
+            Type returnType = _method.IsConstructor ? typeof(void) : (_method as MethodInfo).ReturnType;
+
             DynamicMethod dynamicMethod = new DynamicMethod(
                 string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
                 returnType,
@@ -77,9 +75,6 @@ namespace Focks.IL
                 switch (instruction.OpCode.OperandType)
                 {
                     case OperandType.InlineNone:
-                        if (instruction.OpCode == OpCodes.Ret
-                            && _method.IsConstructor && !_method.IsForValueType())
-                            ilGenerator.Emit(OpCodes.Ldarg_0);
                         ilGenerator.Emit(instruction.OpCode);
                         break;
                     case OperandType.InlineI:
