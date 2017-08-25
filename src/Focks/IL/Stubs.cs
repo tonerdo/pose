@@ -145,13 +145,13 @@ namespace Focks.IL
             ilGenerator.Emit(OpCodes.Callvirt, typeof(MethodRewriter).GetMethod("Rewrite"));
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
             ilGenerator.Emit(OpCodes.Stloc_2);
-            int start = 0;
+            int count = signatureParamTypes.Count;
             if (opCode == OpCodes.Newobj)
             {
                 ilGenerator.Emit(OpCodes.Ldloca, 0);
-                start = 1;
+                count = count - 1;
             }
-            for (int i = start; i < signatureParamTypes.Count; i++)
+            for (int i = 0; i < count; i++)
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             ilGenerator.Emit(OpCodes.Ldloc_2);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
