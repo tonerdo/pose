@@ -165,10 +165,16 @@ namespace Focks.IL
                                 continue;
                             }
 
+                            if (instruction.OpCode != OpCodes.Newobj && instruction.OpCode != OpCodes.Call)
+                            {
+                                ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                                continue;
+                            }
+
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
                             if (constructorInfo.IsForValueType())
-                                ilGenerator.Emit(instruction.OpCode, Stubs.GenerateStubForValTypeConstructor(constructorInfo));
+                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForValTypeConstructor(constructorInfo, instruction.OpCode));
                             else
                                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
                         }
