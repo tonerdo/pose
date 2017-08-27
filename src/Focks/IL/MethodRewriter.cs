@@ -185,8 +185,19 @@ namespace Focks.IL
 
                             if (instruction.OpCode == OpCodes.Call)
                             {
-                                DynamicMethod stub = Stubs.GenerateStubForMethod(methodInfo);
-                                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                                int shimIndex = Array.FindIndex(IsolationContext.Shims, s => s.Original == methodInfo);
+                                DynamicMethod stub = default(DynamicMethod);
+
+                                if (shimIndex != -1)
+                                {
+                                    stub = Stubs.GenerateStubForShim(methodInfo, shimIndex);
+                                }
+                                else
+                                {
+                                    stub = Stubs.GenerateStubForMethod(methodInfo);
+                                    ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                                }
+
                                 ilGenerator.Emit(instruction.OpCode, stub);
                             }
                             else if (instruction.OpCode == OpCodes.Ldftn)

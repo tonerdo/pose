@@ -18,5 +18,8 @@ namespace Focks.Helpers
 
             return methodBase.MethodHandle.GetFunctionPointer();
         }
+
+        public static object GetShimInstance(int index)
+            => IsolationContext.Shims[index].Replacement.Target;
     }
 }
