@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
+using Focks.Extensions;
 
 namespace Focks.Helpers
 {
@@ -29,17 +32,31 @@ namespace Focks.Helpers
             }
         }
 
-        public static bool SignatureEquals(MethodBase m1, MethodInfo m2)
+        public static bool ValidateShimMethodSignature(Shim shim)
         {
-            string signature1 = string.Format("{0}({1})",
-                m1.IsConstructor ? m1.DeclaringType : (m1 as MethodInfo).ReturnType,
-                string.Join<Type>(",", m1.GetParameters().Select(p => p.ParameterType)));
+            MethodBase methodBase = shim.Original;
+            MethodInfo methodInfo = shim.Replacement.Method;
 
-            string signature2 = string.Format("{0}({1})",
-                m2.ReturnType,
-                string.Join<Type>(",", m2.GetParameters().Select(p => p.ParameterType)));
+            List<Type> parameterTypes = new List<Type>();
+            if (!methodBase.IsStatic && !methodBase.IsConstructor)
+            {
+                if (methodBase.IsForValueType())
+                    parameterTypes.Add(methodBase.DeclaringType.MakeByRefType());
+                else
+                    parameterTypes.Add(methodBase.DeclaringType);
+            }
 
-            return signature1 == signature2;
+            parameterTypes.AddRange(methodBase.GetParameters().Select(p => p.ParameterType));
+
+            string validSignature = string.Format("{0} ({1})",
+                methodBase.IsConstructor ? typeof(void) : (methodBase as MethodInfo).ReturnType,
+                string.Join<Type>(", ", parameterTypes));
+
+            string shimSignature = string.Format("{0} ({1})",
+                methodInfo.ReturnType,
+                string.Join<Type>(", ", methodInfo.GetParameters().Select(p => p.ParameterType)));
+
+            return shimSignature == validSignature;
         }
     }
 }

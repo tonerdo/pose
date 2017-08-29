@@ -47,10 +47,10 @@ namespace Focks
 
         private Shim WithImpl(Delegate replacement)
         {
-            if (!ShimHelper.SignatureEquals(_original, replacement.Method))
-                throw new Exception("Signature mismatch");
-
             _replacement = replacement;
+            if (!ShimHelper.ValidateShimMethodSignature(this))
+                throw new Exception("Invalid shim method signature");
+
             return this;
         }
     }
