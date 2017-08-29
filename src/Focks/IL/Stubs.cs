@@ -208,13 +208,13 @@ namespace Focks.IL
                 string.Format("shim_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 methodInfo.ReturnType,
                 parameterTypes.ToArray());
-            
+
             ILGenerator ilGenerator = stub.GetILGenerator();
             ilGenerator.Emit(OpCodes.Ldc_I4, index);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetShimInstance"));
             for (int i = 0; i < parameterTypes.Count; i++)
                 ilGenerator.Emit(OpCodes.Ldarg, i);
-            
+
             ilGenerator.Emit(OpCodes.Call, shim.Replacement.Method);
             ilGenerator.Emit(OpCodes.Ret);
             return stub;

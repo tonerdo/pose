@@ -101,7 +101,37 @@ namespace Focks.IL
                     case OperandType.ShortInlineBrTarget:
                     case OperandType.InlineBrTarget:
                         Label targetLabel = targetInstructions[(instruction.Operand as Instruction).Offset];
-                        ilGenerator.Emit(instruction.OpCode, targetLabel);
+                        // Offset values could change and not be short form anymore
+                        if (instruction.OpCode == OpCodes.Br_S)
+                            ilGenerator.Emit(OpCodes.Br, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Brfalse_S)
+                            ilGenerator.Emit(OpCodes.Brfalse, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Brtrue_S)
+                            ilGenerator.Emit(OpCodes.Brtrue, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Beq_S)
+                            ilGenerator.Emit(OpCodes.Beq, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Bge_S)
+                            ilGenerator.Emit(OpCodes.Bge, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Bgt_S)
+                            ilGenerator.Emit(OpCodes.Bgt, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Ble_S)
+                            ilGenerator.Emit(OpCodes.Ble, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Blt_S)
+                            ilGenerator.Emit(OpCodes.Blt, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Bne_Un_S)
+                            ilGenerator.Emit(OpCodes.Bne_Un, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Bge_Un_S)
+                            ilGenerator.Emit(OpCodes.Bge_Un, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Bgt_Un_S)
+                            ilGenerator.Emit(OpCodes.Bgt_Un, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Ble_Un_S)
+                            ilGenerator.Emit(OpCodes.Ble_Un, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Blt_Un_S)
+                            ilGenerator.Emit(OpCodes.Blt_Un, targetLabel);
+                        else if (instruction.OpCode == OpCodes.Leave_S)
+                            ilGenerator.Emit(OpCodes.Leave, targetLabel);
+                        else
+                            ilGenerator.Emit(instruction.OpCode, targetLabel);
                         break;
                     case OperandType.InlineSwitch:
                         Instruction[] switchInstructions = (Instruction[])instruction.Operand;
