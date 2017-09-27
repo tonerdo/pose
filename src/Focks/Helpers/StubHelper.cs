@@ -21,5 +21,12 @@ namespace Focks.Helpers
 
         public static object GetShimInstance(int index)
             => IsolationContext.Shims[index].Replacement.Target;
+
+        public static MethodInfo GetRuntimeMethodForVirtual(Type type, MethodInfo methodInfo)
+        {
+            BindingFlags bindingFlags = BindingFlags.Instance | (methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
+            Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            return type.GetMethod(methodInfo.Name, bindingFlags, null, types, null);
+        }
     }
 }

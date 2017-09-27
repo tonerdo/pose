@@ -213,7 +213,7 @@ namespace Focks.IL
                                 continue;
                             }
 
-                            if (instruction.OpCode == OpCodes.Call)
+                            if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
                             {
                                 int shimIndex = Array.FindIndex(IsolationContext.Shims, s => s.Original == methodInfo);
                                 DynamicMethod stub = default(DynamicMethod);
@@ -224,11 +224,12 @@ namespace Focks.IL
                                 }
                                 else
                                 {
-                                    stub = Stubs.GenerateStubForMethod(methodInfo);
+                                    stub = instruction.OpCode == OpCodes.Call ?
+                                        Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
                                     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
                                 }
 
-                                ilGenerator.Emit(instruction.OpCode, stub);
+                                ilGenerator.Emit(OpCodes.Call, stub);
                             }
                             else if (instruction.OpCode == OpCodes.Ldftn)
                             {
