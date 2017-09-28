@@ -175,17 +175,9 @@ namespace Focks.IL
                         else if (memberInfo.MemberType == MemberTypes.Constructor)
                         {
                             ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
-
                             MethodBody methodBody = constructorInfo.GetMethodBody();
                             if (methodBody == null)
                             {
-                                ilGenerator.Emit(instruction.OpCode, constructorInfo);
-                                continue;
-                            }
-
-                            if (constructorInfo.DeclaringType == typeof(Object))
-                            {
-                                // call  instance void [System.Runtime]System.Object::.ctor()
                                 ilGenerator.Emit(instruction.OpCode, constructorInfo);
                                 continue;
                             }
@@ -201,7 +193,7 @@ namespace Focks.IL
                             if (constructorInfo.IsForValueType())
                                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForValTypeConstructor(constructorInfo, instruction.OpCode));
                             else
-                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo));
+                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo, instruction.OpCode));
                         }
                         else if (memberInfo.MemberType == MemberTypes.Method)
                         {
