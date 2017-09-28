@@ -219,6 +219,7 @@ namespace Focks.IL
                                     stub = instruction.OpCode == OpCodes.Call ?
                                         Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
                                     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                                    ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                                 }
 
                                 ilGenerator.Emit(OpCodes.Call, stub);
@@ -227,6 +228,7 @@ namespace Focks.IL
                             {
                                 DynamicMethod stub = Stubs.GenerateStubForMethodPointer(methodInfo);
                                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                                 ilGenerator.Emit(OpCodes.Call, stub);
                             }
                             else
