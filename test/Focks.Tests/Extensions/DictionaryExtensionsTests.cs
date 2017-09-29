@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Focks.Tests
 {
     [TestClass]
-    public class DictionaryExtensionTests
+    public class DictionaryExtensionsTests
     {
         [TestMethod]
         public void TestTryAdd()
