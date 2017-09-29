@@ -28,7 +28,7 @@ namespace Focks
             }
         }
 
-        internal Shim(MethodBase original, Delegate replacement)
+        private Shim(MethodBase original, Delegate replacement)
         {
             _original = original;
             _replacement = replacement;
@@ -48,7 +48,7 @@ namespace Focks
         private Shim WithImpl(Delegate replacement)
         {
             _replacement = replacement;
-            if (!ShimHelper.ValidateShimMethodSignature(this))
+            if (!ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method))
                 throw new Exception("Invalid shim method signature");
 
             return this;
