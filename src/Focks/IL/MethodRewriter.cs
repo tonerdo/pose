@@ -190,10 +190,7 @@ namespace Focks.IL
 
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
                             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-                            if (constructorInfo.IsForValueType())
-                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForValTypeConstructor(constructorInfo, instruction.OpCode));
-                            else
-                                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForRefTypeConstructor(constructorInfo, instruction.OpCode));
+                            ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType()));
                         }
                         else if (memberInfo.MemberType == MemberTypes.Method)
                         {
