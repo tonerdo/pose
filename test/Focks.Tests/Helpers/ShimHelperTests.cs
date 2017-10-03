@@ -19,10 +19,10 @@ namespace Focks.Tests
             Expression<Func<DateTime>> expr1 = () => DateTime.MaxValue;
 
             Assert.ThrowsException<NotImplementedException>(
-                () => ShimHelper.GetMethodFromExpression(expr.Body));
+                () => ShimHelper.GetMethodFromExpression(expr.Body, out Object instance));
 
             Assert.ThrowsException<NotImplementedException>(
-                () => ShimHelper.GetMethodFromExpression(expr1.Body));
+                () => ShimHelper.GetMethodFromExpression(expr1.Body, out Object instance));
         }
 
         [TestMethod]
@@ -32,17 +32,17 @@ namespace Focks.Tests
             Expression<Func<string>> expr1 = () => ReadLine();
 
             Assert.AreEqual<MethodBase>(typeof(DateTime).GetMethod("get_Now"),
-                ShimHelper.GetMethodFromExpression(expr.Body));
+                ShimHelper.GetMethodFromExpression(expr.Body, out Object instance));
 
             Assert.AreEqual<MethodBase>(typeof(Console).GetMethod("ReadLine"),
-                ShimHelper.GetMethodFromExpression(expr1.Body));
+                ShimHelper.GetMethodFromExpression(expr1.Body, out instance));
         }
 
         [TestMethod]
         public void TestValidateReplacementMethodSignatureInValid()
         {
             MethodBase original = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
-            MethodInfo replacement = new Action(() => {}).Method;
+            MethodInfo replacement = new Action(() => { }).Method;
 
             Assert.AreEqual<bool>(false, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
 
@@ -54,13 +54,26 @@ namespace Focks.Tests
         public void TestValidateReplacementMethodSignatureValid()
         {
             MethodBase original = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
-            MethodInfo replacement = new Action<string>((s) => {}).Method;
+            MethodInfo replacement = new Action<string>((s) => { }).Method;
 
             Assert.AreEqual<bool>(true, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
 
             original = typeof(string).GetMethod("Contains");
             replacement = new Func<string, string, bool>((d, t) => true).Method;
             Assert.AreEqual<bool>(true, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
+        }
+
+        [TestMethod]
+        public void TestGetObjectFromExpression()
+        {
+            ShimHelperTests shimHelperTests = new ShimHelperTests();
+            Expression<Action> expression = () => shimHelperTests.TestGetObjectFromExpression();
+            var instance = ShimHelper.GetObjectFromExpression((expression.Body as MethodCallExpression).Object);
+
+            Assert.IsNotNull(instance);
+            Assert.AreEqual<Type>(typeof(ShimHelperTests), instance.GetType());
+            Assert.AreSame(shimHelperTests, instance);
+            Assert.AreNotSame(new ShimHelperTests(), instance);
         }
     }
 }
