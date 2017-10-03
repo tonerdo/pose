@@ -20,14 +20,14 @@ namespace Focks.Helpers
                     if (memberInfo.MemberType == MemberTypes.Property)
                     {
                         PropertyInfo propertyInfo = memberInfo as PropertyInfo;
-                        instance = GetObjectFromExpression(memberExpression.Expression);
+                        instance = GetObjectInstanceFromExpression(memberExpression.Expression);
                         return propertyInfo.GetGetMethod();
                     }
                     else
                         throw new NotImplementedException("Unsupported expression");
                 case ExpressionType.Call:
                     MethodCallExpression methodCall = expression as MethodCallExpression;
-                    instance = GetObjectFromExpression(methodCall.Object);
+                    instance = GetObjectInstanceFromExpression(methodCall.Object);
                     return methodCall.Method;
                 default:
                     throw new NotImplementedException("Unsupported expression");
@@ -58,7 +58,7 @@ namespace Focks.Helpers
             return shimSignature == validSignature;
         }
 
-        public static object GetObjectFromExpression(Expression expression)
+        public static object GetObjectInstanceFromExpression(Expression expression)
         {
             if (!(expression is MemberExpression))
                 return null;

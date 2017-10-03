@@ -64,11 +64,11 @@ namespace Focks.Tests
         }
 
         [TestMethod]
-        public void TestGetObjectFromExpression()
+        public void TestGetObjectInstanceFromExpression()
         {
             ShimHelperTests shimHelperTests = new ShimHelperTests();
-            Expression<Action> expression = () => shimHelperTests.TestGetObjectFromExpression();
-            var instance = ShimHelper.GetObjectFromExpression((expression.Body as MethodCallExpression).Object);
+            Expression<Action> expression = () => shimHelperTests.TestGetObjectInstanceFromExpression();
+            var instance = ShimHelper.GetObjectInstanceFromExpression((expression.Body as MethodCallExpression).Object);
 
             Assert.IsNotNull(instance);
             Assert.AreEqual<Type>(typeof(ShimHelperTests), instance.GetType());

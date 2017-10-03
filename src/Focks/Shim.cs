@@ -48,7 +48,7 @@ namespace Focks
             MethodCallExpression methodCall = expression.Body as MethodCallExpression;
             return new Shim(methodCall.Method, null)
             {
-                _instance = ShimHelper.GetObjectFromExpression(methodCall.Object)
+                _instance = ShimHelper.GetObjectInstanceFromExpression(methodCall.Object)
             };
         }
 
