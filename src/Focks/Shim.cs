@@ -43,18 +43,18 @@ namespace Focks
             _replacement = replacement;
         }
 
-        public static Shim Replace(Expression<Action> original)
+        public static Shim Replace(Expression<Action> expression)
         {
-            MethodCallExpression methodCall = original.Body as MethodCallExpression;
+            MethodCallExpression methodCall = expression.Body as MethodCallExpression;
             return new Shim(methodCall.Method, null)
             {
                 _instance = ShimHelper.GetObjectFromExpression(methodCall.Object)
             };
         }
 
-        public static Shim Replace<T>(Expression<Func<T>> original)
+        public static Shim Replace<T>(Expression<Func<T>> expression)
         {
-            return new Shim(ShimHelper.GetMethodFromExpression(original.Body, out object instance), null)
+            return new Shim(ShimHelper.GetMethodFromExpression(expression.Body, out object instance), null)
             {
                 _instance = instance
             };
