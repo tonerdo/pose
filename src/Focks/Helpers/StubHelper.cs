@@ -22,6 +22,9 @@ namespace Focks.Helpers
         public static object GetShimInstance(int index)
             => IsolationContext.Shims[index].Replacement.Target;
 
+        public static MethodInfo GetShimReplacementMethod(int index)
+            => IsolationContext.Shims[index].Replacement.Method;
+
         public static int GetMatchingShimIndex(MethodInfo methodInfo, object obj)
         {
             if (methodInfo.IsStatic || obj == null)
