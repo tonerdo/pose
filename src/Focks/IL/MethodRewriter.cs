@@ -204,21 +204,10 @@ namespace Focks.IL
 
                             if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
                             {
-                                int shimIndex = Array.FindIndex(IsolationContext.Shims, s => s.Original == methodInfo);
-                                DynamicMethod stub = default(DynamicMethod);
-
-                                if (shimIndex != -1)
-                                {
-                                    stub = Stubs.GenerateStubForShim(methodInfo, shimIndex);
-                                }
-                                else
-                                {
-                                    stub = instruction.OpCode == OpCodes.Call ?
-                                        Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
-                                    ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                                    ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                                }
-
+                                DynamicMethod stub = instruction.OpCode == OpCodes.Call ?
+                                    Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
+                                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                                 ilGenerator.Emit(OpCodes.Call, stub);
                             }
                             else if (instruction.OpCode == OpCodes.Ldftn)
