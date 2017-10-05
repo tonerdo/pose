@@ -8,7 +8,7 @@ namespace Pose
 {
     public class IsolationContext
     {
-        internal static Shim[] Shims;
+        internal static Shim[] Shims { private set; get; }
 
         public IsolationContext(Action entryPoint, params Shim[] shims)
         {
