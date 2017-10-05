@@ -65,5 +65,13 @@ namespace Pose.Tests
             Assert.AreEqual(1, StubHelper.GetMatchingShimIndex(stubMethodInfo, new StubHelperTests()));
             Assert.AreEqual(2, StubHelper.GetMatchingShimIndex(stubMethodInfo, stubHelperTests));
         }
+
+        [TestMethod]
+        public void TestGetRuntimeMethodForVirtual()
+        {
+            Type type = typeof(StubHelperTests);
+            MethodInfo methodInfo = type.GetMethod("TestGetRuntimeMethodForVirtual");
+            Assert.AreEqual(methodInfo, StubHelper.GetRuntimeMethodForVirtual(type, methodInfo));
+        }
     }
 }
