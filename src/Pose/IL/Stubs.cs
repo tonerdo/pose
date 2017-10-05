@@ -272,36 +272,5 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ret);
             return stub;
         }
-
-        public static DynamicMethod GenerateStubForShim(MethodInfo methodInfo, int index)
-        {
-            Shim shim = IsolationContext.Shims[index];
-            ParameterInfo[] parameters = methodInfo.GetParameters();
-            List<Type> parameterTypes = new List<Type>();
-            if (!methodInfo.IsStatic)
-            {
-                if (methodInfo.IsForValueType())
-                    parameterTypes.Add(methodInfo.DeclaringType.MakeByRefType());
-                else
-                    parameterTypes.Add(methodInfo.DeclaringType);
-            }
-
-            parameterTypes.AddRange(parameters.Select(p => p.ParameterType));
-
-            DynamicMethod stub = new DynamicMethod(
-                string.Format("shim_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
-                methodInfo.ReturnType,
-                parameterTypes.ToArray());
-
-            ILGenerator ilGenerator = stub.GetILGenerator();
-            ilGenerator.Emit(OpCodes.Ldc_I4, index);
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetShimInstance"));
-            for (int i = 0; i < parameterTypes.Count; i++)
-                ilGenerator.Emit(OpCodes.Ldarg, i);
-
-            ilGenerator.Emit(OpCodes.Call, shim.Replacement.Method);
-            ilGenerator.Emit(OpCodes.Ret);
-            return stub;
-        }
     }
 }
