@@ -34,5 +34,16 @@ namespace Pose.Tests
             Assert.AreEqual(action.Target, StubHelper.GetShimInstance(0));
             Assert.AreSame(action.Target, StubHelper.GetShimInstance(0));
         }
+
+        [TestMethod]
+        public void TestGetShimReplacementMethod()
+        {
+            Action action = new Action(() => Console.Clear());
+            Shim shim = Shim.Replace(() => Console.Clear()).With(action);
+            new IsolationContext(() => { }, shim);
+
+            Assert.AreEqual(action.Method, StubHelper.GetShimReplacementMethod(0));
+            Assert.AreSame(action.Method, StubHelper.GetShimReplacementMethod(0));
+        }
     }
 }
