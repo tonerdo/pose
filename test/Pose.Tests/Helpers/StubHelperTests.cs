@@ -45,5 +45,25 @@ namespace Pose.Tests
             Assert.AreEqual(action.Method, StubHelper.GetShimReplacementMethod(0));
             Assert.AreSame(action.Method, StubHelper.GetShimReplacementMethod(0));
         }
+
+        [TestMethod]
+        public void TestGetMatchingShimIndex()
+        {
+            StubHelperTests stubHelperTests = new StubHelperTests();
+            Action staticAction = new Action(() => { });
+            Action<StubHelperTests> instanceAction = new Action<StubHelperTests>((@this) => { });
+
+            Shim shim = Shim.Replace(() => Console.Clear()).With(staticAction);
+            Shim shim1 = Shim.Replace(() => Of.Type<StubHelperTests>().TestGetMatchingShimIndex()).With(instanceAction);
+            Shim shim2 = Shim.Replace(() => stubHelperTests.TestGetMatchingShimIndex()).With(instanceAction);
+            new IsolationContext(() => { }, shim, shim1, shim2);
+
+            MethodInfo consoleMethodInfo = typeof(Console).GetMethod("Clear");
+            MethodInfo stubMethodInfo = typeof(StubHelperTests).GetMethod("TestGetMatchingShimIndex");
+
+            Assert.AreEqual(0, StubHelper.GetMatchingShimIndex(consoleMethodInfo, null));
+            Assert.AreEqual(1, StubHelper.GetMatchingShimIndex(stubMethodInfo, new StubHelperTests()));
+            Assert.AreEqual(2, StubHelper.GetMatchingShimIndex(stubMethodInfo, stubHelperTests));
+        }
     }
 }
