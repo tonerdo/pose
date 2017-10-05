@@ -23,5 +23,16 @@ namespace Pose.Tests
             Assert.AreNotEqual(IntPtr.Zero, StubHelper.GetMethodPointer(methodInfo));
             Assert.AreNotEqual(IntPtr.Zero, StubHelper.GetMethodPointer(dynamicMethod));
         }
+
+        [TestMethod]
+        public void TestGetShimInstance()
+        {
+            Action action = new Action(() => Console.Clear());
+            Shim shim = Shim.Replace(() => Console.Clear()).With(action);
+            new IsolationContext(() => { }, shim);
+
+            Assert.AreEqual(action.Target, StubHelper.GetShimInstance(0));
+            Assert.AreSame(action.Target, StubHelper.GetShimInstance(0));
+        }
     }
 }
