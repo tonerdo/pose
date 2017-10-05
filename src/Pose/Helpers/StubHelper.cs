@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
-namespace Focks.Helpers
+namespace Pose.Helpers
 {
     internal static class StubHelper
     {

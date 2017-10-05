@@ -5,10 +5,10 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Serialization;
 
-using Focks.Extensions;
-using Focks.Helpers;
+using Pose.Extensions;
+using Pose.Helpers;
 
-namespace Focks.IL
+namespace Pose.IL
 {
     internal static class Stubs
     {

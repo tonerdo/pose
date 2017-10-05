@@ -2,12 +2,12 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 
-using Focks.Helpers;
+using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using static System.Console;
 
-namespace Focks.Tests
+namespace Pose.Tests
 {
     [TestClass]
     public class ShimHelperTests

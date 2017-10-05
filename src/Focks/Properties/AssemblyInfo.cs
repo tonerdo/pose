@@ -1,1 +1,0 @@
-[assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Focks.Tests")]

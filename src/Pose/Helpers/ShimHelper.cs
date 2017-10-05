@@ -4,9 +4,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-using Focks.Extensions;
+using Pose.Extensions;
 
-namespace Focks.Helpers
+namespace Pose.Helpers
 {
     internal static class ShimHelper
     {

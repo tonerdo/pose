@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Focks.IL;
+using Pose.IL;
 
-namespace Focks
+namespace Pose
 {
     public class IsolationContext
     {

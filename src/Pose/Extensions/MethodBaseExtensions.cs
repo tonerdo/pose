@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace Focks.Extensions
+namespace Pose.Extensions
 {
     internal static class MethodBaseExtensions
     {

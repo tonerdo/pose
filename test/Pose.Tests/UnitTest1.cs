@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Focks.Tests
+namespace Pose.Tests
 {
     [TestClass]
     public class UnitTest1

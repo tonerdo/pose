@@ -5,11 +5,11 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3D859125-47BB-49F0-ACB4-42CEE47FB562}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Focks", "src\Focks\Focks.csproj", "{BBC1C0DC-ECA2-48C3-A233-0873428203AF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pose", "src\Pose\Pose.csproj", "{BBC1C0DC-ECA2-48C3-A233-0873428203AF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{C2484D4C-4BED-46C2-BD61-2508BD8BD3C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Focks.Tests", "test\Focks.Tests\Focks.Tests.csproj", "{AE06C68C-032F-45CC-888C-54B0B98F860C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pose.Tests", "test\Pose.Tests\Pose.Tests.csproj", "{AE06C68C-032F-45CC-888C-54B0B98F860C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

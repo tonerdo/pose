@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Focks.Extensions
+namespace Pose.Extensions
 {
     internal static class DictionaryExtensions
     {

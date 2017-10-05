@@ -3,9 +3,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-using Focks.Helpers;
+using Pose.Helpers;
 
-namespace Focks
+namespace Pose
 {
     public partial class Shim
     {

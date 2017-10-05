@@ -1,10 +1,10 @@
 using System;
 using System.Reflection;
 
-using Focks.Extensions;
+using Pose.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Focks.Tests
+namespace Pose.Tests
 {
     [TestClass]
     public class MethodBaseExtensionsTests

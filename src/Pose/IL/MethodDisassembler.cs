@@ -4,7 +4,7 @@ using System.Reflection;
 
 using Mono.Reflection;
 
-namespace Focks.IL
+namespace Pose.IL
 {
     internal class MethodDisassembler
     {

@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-using Focks.Extensions;
-using Focks.Helpers;
+using Pose.Extensions;
+using Pose.Helpers;
 using Mono.Reflection;
 
-namespace Focks.IL
+namespace Pose.IL
 {
     internal class MethodRewriter
     {

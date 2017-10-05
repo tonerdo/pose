@@ -1,6 +1,6 @@
 using System;
 
-namespace Focks
+namespace Pose
 {
     public static class Of
     {
