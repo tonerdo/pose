@@ -50,5 +50,32 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(RuntimeMethodHandle), dynamicMethod.GetParameters()[count - 2].ParameterType);
             Assert.AreEqual(typeof(RuntimeTypeHandle), dynamicMethod.GetParameters()[count - 1].ParameterType);
         }
+
+        [TestMethod]
+        public void TestGenerateStubForConstructorNewobj()
+        {
+            ConstructorInfo constructorInfo = typeof(List<string>).GetConstructor(Type.EmptyTypes);
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForConstructor(constructorInfo, OpCodes.Newobj, false);
+            int count = dynamicMethod.GetParameters().Length;
+
+            Assert.AreEqual(constructorInfo.GetParameters().Length, dynamicMethod.GetParameters().Length - 2);
+            Assert.AreEqual(typeof(List<string>), dynamicMethod.ReturnType);
+            Assert.AreEqual(typeof(RuntimeMethodHandle), dynamicMethod.GetParameters()[count - 2].ParameterType);
+            Assert.AreEqual(typeof(RuntimeTypeHandle), dynamicMethod.GetParameters()[count - 1].ParameterType);
+        }
+
+        [TestMethod]
+        public void TestGenerateStubForConstructorCall()
+        {
+            ConstructorInfo constructorInfo = typeof(List<string>).GetConstructor(Type.EmptyTypes);
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForConstructor(constructorInfo, OpCodes.Call, false);
+            int count = dynamicMethod.GetParameters().Length;
+
+            Assert.AreEqual(constructorInfo.GetParameters().Length, dynamicMethod.GetParameters().Length - 3);
+            Assert.AreEqual(typeof(List<string>), dynamicMethod.GetParameters()[0].ParameterType);
+            Assert.AreEqual(typeof(void), dynamicMethod.ReturnType);
+            Assert.AreEqual(typeof(RuntimeMethodHandle), dynamicMethod.GetParameters()[count - 2].ParameterType);
+            Assert.AreEqual(typeof(RuntimeTypeHandle), dynamicMethod.GetParameters()[count - 1].ParameterType);
+        }
     }
 }
