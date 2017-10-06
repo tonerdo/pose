@@ -77,5 +77,18 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(RuntimeMethodHandle), dynamicMethod.GetParameters()[count - 2].ParameterType);
             Assert.AreEqual(typeof(RuntimeTypeHandle), dynamicMethod.GetParameters()[count - 1].ParameterType);
         }
+
+        [TestMethod]
+        public void TestGenerateStubForMethodPointer()
+        {
+            MethodInfo methodInfo = typeof(Console).GetMethod("WriteLine", new[] { typeof(string) });
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForMethodPointer(methodInfo);
+            int count = dynamicMethod.GetParameters().Length;
+
+            Assert.AreEqual(2, dynamicMethod.GetParameters().Length);
+            Assert.AreEqual(typeof(IntPtr), dynamicMethod.ReturnType);
+            Assert.AreEqual(typeof(RuntimeMethodHandle), dynamicMethod.GetParameters()[0].ParameterType);
+            Assert.AreEqual(typeof(RuntimeTypeHandle), dynamicMethod.GetParameters()[1].ParameterType);
+        }
     }
 }
