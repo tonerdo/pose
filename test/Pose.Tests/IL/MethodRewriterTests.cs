@@ -1,5 +1,5 @@
 using System;
-using System.Linq.Expressions;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -13,7 +13,7 @@ namespace Pose.Tests
     public class MethodRewriterTests
     {
         [TestMethod]
-        public void TestRewrite()
+        public void TestStaticMethodRewrite()
         {
             MethodInfo methodInfo = typeof(StubHelper).GetMethod("GetMethodPointer");
             MethodRewriter methodRewriter = MethodRewriter.CreateRewriter(methodInfo);
@@ -21,6 +21,34 @@ namespace Pose.Tests
 
             Delegate func = dynamicMethod.CreateDelegate(typeof(Func<MethodBase, IntPtr>));
             Assert.AreEqual(StubHelper.GetMethodPointer(methodInfo), func.DynamicInvoke(methodInfo));
+        }
+
+        [TestMethod]
+        public void TestInstanceMethodRewrite()
+        {
+            string item = "Item 1";
+            List<string> list = new List<string>();
+            MethodInfo methodInfo = typeof(List<string>).GetMethod("Add");
+            MethodRewriter methodRewriter = MethodRewriter.CreateRewriter(methodInfo);
+            DynamicMethod dynamicMethod = methodRewriter.Rewrite() as DynamicMethod;
+
+            Delegate func = dynamicMethod.CreateDelegate(typeof(Action<List<string>, string>));
+            func.DynamicInvoke(list, item);
+
+            Assert.AreEqual(1, list.Count);
+            Assert.AreEqual(item, list[0]);
+        }
+
+        [TestMethod]
+        public void TestConstructorRewrite()
+        {
+            List<string> list = new List<string>();
+            ConstructorInfo constructorInfo = typeof(List<string>).GetConstructor(Type.EmptyTypes);
+            MethodRewriter methodRewriter = MethodRewriter.CreateRewriter(constructorInfo);
+            DynamicMethod dynamicMethod = methodRewriter.Rewrite() as DynamicMethod;
+
+            Assert.AreEqual(typeof(void), dynamicMethod.ReturnType);
+            Assert.AreEqual(typeof(List<string>), dynamicMethod.GetParameters()[0].ParameterType);
         }
     }
 }
