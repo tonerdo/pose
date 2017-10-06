@@ -29,7 +29,7 @@ namespace Pose.Tests
         {
             Action action = new Action(() => Console.Clear());
             Shim shim = Shim.Replace(() => Console.Clear()).With(action);
-            new IsolationContext(() => { }, shim);
+            PoseContext.Isolate(() => { }, shim);
 
             Assert.AreEqual(action.Target, StubHelper.GetShimInstance(0));
             Assert.AreSame(action.Target, StubHelper.GetShimInstance(0));
@@ -40,7 +40,7 @@ namespace Pose.Tests
         {
             Action action = new Action(() => Console.Clear());
             Shim shim = Shim.Replace(() => Console.Clear()).With(action);
-            new IsolationContext(() => { }, shim);
+            PoseContext.Isolate(() => { }, shim);
 
             Assert.AreEqual(action.Method, StubHelper.GetShimReplacementMethod(0));
             Assert.AreSame(action.Method, StubHelper.GetShimReplacementMethod(0));
@@ -56,7 +56,7 @@ namespace Pose.Tests
             Shim shim = Shim.Replace(() => Console.Clear()).With(staticAction);
             Shim shim1 = Shim.Replace(() => Of.Type<StubHelperTests>().TestGetMatchingShimIndex()).With(instanceAction);
             Shim shim2 = Shim.Replace(() => stubHelperTests.TestGetMatchingShimIndex()).With(instanceAction);
-            new IsolationContext(() => { }, shim, shim1, shim2);
+            PoseContext.Isolate(() => { }, shim, shim1, shim2);
 
             MethodInfo consoleMethodInfo = typeof(Console).GetMethod("Clear");
             MethodInfo stubMethodInfo = typeof(StubHelperTests).GetMethod("TestGetMatchingShimIndex");

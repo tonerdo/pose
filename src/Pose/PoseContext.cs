@@ -6,11 +6,11 @@ using Pose.IL;
 
 namespace Pose
 {
-    public class IsolationContext
+    public static class PoseContext
     {
         internal static Shim[] Shims { private set; get; }
 
-        public IsolationContext(Action entryPoint, params Shim[] shims)
+        public static void Isolate(Action entryPoint, params Shim[] shims)
         {
             Shims = shims;
             Type delegateType = typeof(Action<>).MakeGenericType(entryPoint.Target.GetType());
