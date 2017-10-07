@@ -34,7 +34,8 @@ namespace Pose.Helpers
                 s => Object.ReferenceEquals(obj, s.Instance) && s.Original == methodInfo);
 
             if (index == -1)
-                return Array.FindIndex(PoseContext.Shims, s => s.Original == methodInfo);
+                return Array.FindIndex(PoseContext.Shims,
+                            s => s.Original == methodInfo && s.Instance == null);
 
             return index;
         }
