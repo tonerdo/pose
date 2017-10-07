@@ -3,9 +3,9 @@ configuration:
   - Debug
   - Release
 build_script:
-  - echo "Building for $env:CONFIGURATION"
+  - echo "Building for %CONFIGURATION%"
   - dotnet restore
-  - dotnet build -c $env:CONFIGURATION
+  - dotnet build -c %CONFIGURATION%
 test_script:
   - ps: dotnet test .\test\Pose.Tests\Pose.Tests.csproj
   - ps: if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
