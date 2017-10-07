@@ -69,13 +69,13 @@ namespace Pose.Helpers
             {
                 FieldInfo fieldInfo = (memberExpression.Member as FieldInfo);
                 var obj = fieldInfo.IsStatic ? null : constantExpression.Value;
-                return (memberExpression.Member as FieldInfo).GetValue(obj);
+                return fieldInfo.GetValue(obj);
             }
             else if (memberExpression.Member.MemberType == MemberTypes.Property)
             {
                 PropertyInfo propertyInfo = (memberExpression.Member as PropertyInfo);
                 var obj = propertyInfo.GetMethod.IsStatic ? null : constantExpression.Value;
-                return (memberExpression.Member as PropertyInfo).GetValue(obj);
+                return propertyInfo.GetValue(obj);
             }
             return null;
         }
