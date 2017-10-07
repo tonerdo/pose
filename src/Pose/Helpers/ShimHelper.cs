@@ -63,21 +63,30 @@ namespace Pose.Helpers
             if (!(expression is MemberExpression))
                 return null;
 
+            object instance = null;
             MemberExpression memberExpression = expression as MemberExpression;
             ConstantExpression constantExpression = memberExpression.Expression as ConstantExpression;
             if (memberExpression.Member.MemberType == MemberTypes.Field)
             {
                 FieldInfo fieldInfo = (memberExpression.Member as FieldInfo);
                 var obj = fieldInfo.IsStatic ? null : constantExpression.Value;
-                return fieldInfo.GetValue(obj);
+                instance = fieldInfo.GetValue(obj);
             }
             else if (memberExpression.Member.MemberType == MemberTypes.Property)
             {
                 PropertyInfo propertyInfo = (memberExpression.Member as PropertyInfo);
                 var obj = propertyInfo.GetMethod.IsStatic ? null : constantExpression.Value;
-                return propertyInfo.GetValue(obj);
+                instance = propertyInfo.GetValue(obj);
             }
-            return null;
+
+            EnsureInstanceNotValueType(instance);
+            return instance;
+        }
+
+        private static void EnsureInstanceNotValueType(object instance)
+        {
+            if (instance.GetType().IsSubclassOf(typeof(ValueType)))
+                throw new NotSupportedException("You cannot replace methods on specific value type instances");
         }
     }
 }

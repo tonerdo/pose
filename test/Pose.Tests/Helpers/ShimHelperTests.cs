@@ -64,6 +64,16 @@ namespace Pose.Tests
         }
 
         [TestMethod]
+        public void TestGetObjectInstanceFromExpressionValueType()
+        {
+            DateTime dateTime = new DateTime();
+            Expression<Func<DateTime>> expression = () => dateTime.AddDays(2);
+
+            Assert.ThrowsException<NotSupportedException>(
+                () => ShimHelper.GetObjectInstanceFromExpression((expression.Body as MethodCallExpression).Object));
+        }
+
+        [TestMethod]
         public void TestGetObjectInstanceFromExpression()
         {
             ShimHelperTests shimHelperTests = new ShimHelperTests();
