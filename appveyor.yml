@@ -1,0 +1,13 @@
+version: '1.0.0.{build}'
+configuration:
+  - Debug
+  - Release
+build_script:
+  - echo "Building for $env:CONFIGURATION"
+  - dotnet restore
+  - dotnet build -c $env:CONFIGURATION
+test_script:
+  - ps: dotnet test .\test\Pose.Tests\Pose.Tests.csproj
+  - ps: if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+cache:
+  - '%USERPROFILE%\.nuget\packages'
