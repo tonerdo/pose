@@ -39,7 +39,7 @@ namespace Pose.Tests
             Assert.ThrowsException<Exception>(
                 () => Shim.Replace(() => shimTests.TestReplace()).With(() => { }));
             Assert.ThrowsException<Exception>(
-                () => Shim.Replace(() => Console.WriteLine(Of.Type<string>())).With(() => { }));
+                () => Shim.Replace(() => Console.WriteLine(Is.A<string>())).With(() => { }));
         }
 
         [TestMethod]

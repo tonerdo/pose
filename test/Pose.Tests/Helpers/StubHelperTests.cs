@@ -54,7 +54,7 @@ namespace Pose.Tests
             Action<StubHelperTests> instanceAction = new Action<StubHelperTests>((@this) => { });
 
             Shim shim = Shim.Replace(() => Console.Clear()).With(staticAction);
-            Shim shim1 = Shim.Replace(() => Of.Type<StubHelperTests>().TestGetMatchingShimIndex()).With(instanceAction);
+            Shim shim1 = Shim.Replace(() => Is.A<StubHelperTests>().TestGetMatchingShimIndex()).With(instanceAction);
             Shim shim2 = Shim.Replace(() => stubHelperTests.TestGetMatchingShimIndex()).With(instanceAction);
             PoseContext.Isolate(() => { }, shim, shim1, shim2);
 
