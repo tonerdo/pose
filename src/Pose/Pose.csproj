@@ -1,6 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <Title>Pose</Title>
+    <Description>A lightweight unconstrained isolation framework for .NET Standard</Description>
+    <VersionPrefix>1.0.0</VersionPrefix>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Pose</AssemblyName>
+    <PackageId>Pose</PackageId>
+    <PackageTags>pose;mocking;testing;unit-test;isolation-framework;test-framework</PackageTags>
+    <PackageProjectUrl>https://github.com/tonerdo/pose</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/tonerdo/pose/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/tonerdo/pose</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Reflection" Version="1.1.0.0" />
