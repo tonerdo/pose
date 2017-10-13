@@ -106,7 +106,7 @@ namespace Pose.IL
             parameterTypes.Add(typeof(RuntimeTypeHandle));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
+                string.Format("stub_virt_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 methodInfo.ReturnType,
                 parameterTypes.ToArray());
 
@@ -190,7 +190,7 @@ namespace Pose.IL
             parameterTypes.Add(typeof(RuntimeTypeHandle));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("stub_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
+                string.Format("stub_ctor_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
                 opCode == OpCodes.Newobj ? constructorInfo.DeclaringType : typeof(void),
                 parameterTypes.ToArray());
 
@@ -251,7 +251,7 @@ namespace Pose.IL
             parameterTypes.Add(typeof(RuntimeTypeHandle));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
+                string.Format("stub_ftn_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 typeof(IntPtr),
                 parameterTypes.ToArray());
 
