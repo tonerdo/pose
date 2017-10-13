@@ -21,7 +21,14 @@ namespace Pose
             Shims = shims;
             Type delegateType = typeof(Action<>).MakeGenericType(entryPoint.Target.GetType());
             MethodRewriter rewriter = MethodRewriter.CreateRewriter(entryPoint.Method);
-            ((MethodInfo)(rewriter.Rewrite())).CreateDelegate(delegateType).DynamicInvoke(entryPoint.Target);
+            try
+            {
+                ((MethodInfo)(rewriter.Rewrite())).CreateDelegate(delegateType).DynamicInvoke(entryPoint.Target);
+            }
+            catch (TargetInvocationException e) when (e.InnerException != null)
+            {
+                throw e.InnerException;
+            }
         }
     }
 }
