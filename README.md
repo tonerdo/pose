@@ -117,15 +117,15 @@ PoseContext.Isolate(() =>
 
 ## Caveats & Limitations
 
-* Breakpoints - At this time any breakpoints set anywhere in the isolated code and its execution path will not be hit. However, breakpoints set within a shim replacement delegate are hit.
-* Exceptions - At this time all unhandled exceptions thrown in isolated code and its execution path are always wrapped in `System.Reflection.TargetInvocationException`.
-* Property Setters - Unlike Microsoft Fakes, Pose cannot create shims for property setters.
+* **Breakpoints** - At this time any breakpoints set anywhere in the isolated code and its execution path will not be hit. However, breakpoints set within a shim replacement delegate are hit.
+* **Exceptions** - At this time all unhandled exceptions thrown in isolated code and its execution path are always wrapped in `System.Reflection.TargetInvocationException`.
+* **Property Setters** - Unlike Microsoft Fakes, Pose cannot create shims for property setters.
 
 ## Roadmap
 
-* Constructor Shimming - Ability to create shims for constructors.
-* Performance Improvements - Pose can be used outside the context of unit tests. Better performance would make it suitable for use in production code, possibly to override legacy functionality.
-* Exceptions Stack Trace - Currently when exceptions are thrown in your own code under isolation, the supplied exception stack trace is quite confusing. Providing an undiluted exception stack trace is needed.
+* **Constructor Shimming** - Ability to create shims for constructors.
+* **Performance Improvements** - Pose can be used outside the context of unit tests. Better performance would make it suitable for use in production code, possibly to override legacy functionality.
+* **Exceptions Stack Trace** - Currently when exceptions are thrown in your own code under isolation, the supplied exception stack trace is quite confusing. Providing an undiluted exception stack trace is needed.
 
 ## Issues & Contributions
 
