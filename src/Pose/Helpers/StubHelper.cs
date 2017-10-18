@@ -46,5 +46,8 @@ namespace Pose.Helpers
             Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
             return type.GetMethod(methodInfo.Name, bindingFlags, null, types, null);
         }
+
+        public static Module GetOwningModule()
+            => Assembly.GetAssembly(typeof(StubHelper)).Modules.FirstOrDefault();
     }
 }

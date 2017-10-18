@@ -34,7 +34,9 @@ namespace Pose.IL
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 methodInfo.ReturnType,
-                parameterTypes.ToArray());
+                parameterTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
@@ -108,7 +110,9 @@ namespace Pose.IL
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 methodInfo.ReturnType,
-                parameterTypes.ToArray());
+                parameterTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
@@ -192,7 +196,9 @@ namespace Pose.IL
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", constructorInfo.DeclaringType, constructorInfo.Name),
                 opCode == OpCodes.Newobj ? constructorInfo.DeclaringType : typeof(void),
-                parameterTypes.ToArray());
+                parameterTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
             ilGenerator.DeclareLocal(constructorInfo.DeclaringType);
@@ -253,7 +259,9 @@ namespace Pose.IL
             DynamicMethod stub = new DynamicMethod(
                 string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
                 typeof(IntPtr),
-                parameterTypes.ToArray());
+                parameterTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
             ilGenerator.DeclareLocal(typeof(MethodInfo));
