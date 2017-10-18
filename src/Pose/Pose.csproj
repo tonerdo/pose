@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Title>Pose</Title>
-    <Description>A lightweight unconstrained isolation framework for .NET Standard</Description>
-    <VersionPrefix>1.0.0</VersionPrefix>
+    <Description>Replace any .NET method (including static and non-virtual) with a delegate</Description>
+    <PackageVersion>1.0.1</PackageVersion>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>portable</DebugType>
     <AssemblyName>Pose</AssemblyName>
