@@ -73,5 +73,12 @@ namespace Pose.Tests
             MethodInfo methodInfo = type.GetMethod("TestGetRuntimeMethodForVirtual");
             Assert.AreEqual(methodInfo, StubHelper.GetRuntimeMethodForVirtual(type, methodInfo));
         }
+
+        [TestMethod]
+        public void TestGetOwningModule()
+        {
+            Assert.AreEqual(typeof(StubHelper).Module, StubHelper.GetOwningModule());
+            Assert.AreNotEqual(typeof(StubHelperTests).Module, StubHelper.GetOwningModule());
+        }
     }
 }
