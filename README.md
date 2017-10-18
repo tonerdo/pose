@@ -5,7 +5,7 @@
 
 Pose allows you to replace any .NET method (including static and non-virtual) with a delegate. It is similar to [Microsoft Fakes](https://msdn.microsoft.com/en-us/library/hh549175.aspx) but unlike it Pose is implemented _entirely_ in managed code (Reflection Emit API). Everything occurs at runtime and in-memory, no unmanaged Profiling APIs and no file system pollution with re-written assemblies.
 
-Pose is cross platform and runs anywhere .NET is supported. It targets .NET Standard 2.0 so it can be used across .NET platforms including .NET Framework, .NET Core, Mono and Xamarin.
+Pose is cross platform and runs anywhere .NET is supported. It targets .NET Standard 2.0 so it can be used across .NET platforms including .NET Framework, .NET Core, Mono and Xamarin. See version compatibility table [here](https://docs.microsoft.com/en-us/dotnet/standard/net-standard).
 
 ## Installation
 
@@ -114,6 +114,12 @@ PoseContext.Isolate(() =>
 
 }, consoleShim, dateTimeShim, classPropShim, classShim, myClassShim, structShim);
 ```
+
+## Caveats & Limitations
+
+* Breakpoints - At this time any breakpoints set anywhere in the isolated code and its execution path will not be hit. However, breakpoints set within a shim replacement delegate are hit.
+* Exceptions - At this time all unhandled exceptions thrown in isolated code and its execution path are always wrapped in `System.Reflection.TargetInvocationException`.
+* Property Setters - Unlike Microsoft Fakes, Pose cannot create shims for property setters.
 
 ## Roadmap
 
