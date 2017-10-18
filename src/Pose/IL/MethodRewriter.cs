@@ -38,7 +38,9 @@ namespace Pose.IL
             DynamicMethod dynamicMethod = new DynamicMethod(
                 string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
                 returnType,
-                parameterTypes.ToArray());
+                parameterTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
 
             MethodDisassembler disassembler = new MethodDisassembler(_method);
             IList<LocalVariableInfo> locals = _method.GetMethodBody().LocalVariables;
