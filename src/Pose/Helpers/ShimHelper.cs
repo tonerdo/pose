@@ -26,9 +26,13 @@ namespace Pose.Helpers
                     else
                         throw new NotImplementedException("Unsupported expression");
                 case ExpressionType.Call:
-                    MethodCallExpression methodCall = expression as MethodCallExpression;
-                    instance = GetObjectInstanceFromExpression(methodCall.Object);
-                    return methodCall.Method;
+                    MethodCallExpression methodCallExpression = expression as MethodCallExpression;
+                    instance = GetObjectInstanceFromExpression(methodCallExpression.Object);
+                    return methodCallExpression.Method;
+                case ExpressionType.New:
+                    NewExpression newExpression = expression as NewExpression;
+                    instance = null;
+                    return newExpression.Constructor;
                 default:
                     throw new NotImplementedException("Unsupported expression");
             }
@@ -48,7 +52,7 @@ namespace Pose.Helpers
             parameterTypes.AddRange(original.GetParameters().Select(p => p.ParameterType));
 
             string validSignature = string.Format("{0} ({1})",
-                original.IsConstructor ? typeof(void) : (original as MethodInfo).ReturnType,
+                original.IsConstructor ? original.DeclaringType : (original as MethodInfo).ReturnType,
                 string.Join<Type>(", ", parameterTypes));
 
             string shimSignature = string.Format("{0} ({1})",
