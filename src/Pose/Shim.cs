@@ -13,7 +13,7 @@ namespace Pose
         private Delegate _replacement;
         private Object _instance;
 
-        public MethodBase Original
+        internal MethodBase Original
         {
             get
             {
@@ -21,7 +21,7 @@ namespace Pose
             }
         }
 
-        public Delegate Replacement
+        internal Delegate Replacement
         {
             get
             {
