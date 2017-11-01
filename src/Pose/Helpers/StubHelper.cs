@@ -19,7 +19,7 @@ namespace Pose.Helpers
             return methodBase.MethodHandle.GetFunctionPointer();
         }
 
-        public static object GetShimInstance(int index)
+        public static object GetShimDelegateTarget(int index)
             => PoseContext.Shims[index].Replacement.Target;
 
         public static MethodInfo GetShimReplacementMethod(int index)
