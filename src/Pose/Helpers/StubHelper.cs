@@ -25,17 +25,17 @@ namespace Pose.Helpers
         public static MethodInfo GetShimReplacementMethod(int index)
             => PoseContext.Shims[index].Replacement.Method;
 
-        public static int GetMatchingShimIndex(MethodInfo methodInfo, object obj)
+        public static int GetMatchingShimIndex(MethodBase methodBase, object obj)
         {
-            if (methodInfo.IsStatic || obj == null)
-                return Array.FindIndex(PoseContext.Shims, s => s.Original == methodInfo);
+            if (methodBase.IsStatic || obj == null)
+                return Array.FindIndex(PoseContext.Shims, s => s.Original == methodBase);
 
             int index = Array.FindIndex(PoseContext.Shims,
-                s => Object.ReferenceEquals(obj, s.Instance) && s.Original == methodInfo);
+                s => Object.ReferenceEquals(obj, s.Instance) && s.Original == methodBase);
 
             if (index == -1)
                 return Array.FindIndex(PoseContext.Shims,
-                            s => s.Original == methodInfo && s.Instance == null);
+                            s => s.Original == methodBase && s.Instance == null);
 
             return index;
         }
