@@ -47,23 +47,23 @@ namespace Pose.Tests
         }
 
         [TestMethod]
-        public void TestGetMatchingShimIndex()
+        public void TestGetIndexOfMatchingShim()
         {
             StubHelperTests stubHelperTests = new StubHelperTests();
             Action staticAction = new Action(() => { });
             Action<StubHelperTests> instanceAction = new Action<StubHelperTests>((@this) => { });
 
             Shim shim = Shim.Replace(() => Console.Clear()).With(staticAction);
-            Shim shim1 = Shim.Replace(() => Is.A<StubHelperTests>().TestGetMatchingShimIndex()).With(instanceAction);
-            Shim shim2 = Shim.Replace(() => stubHelperTests.TestGetMatchingShimIndex()).With(instanceAction);
+            Shim shim1 = Shim.Replace(() => Is.A<StubHelperTests>().TestGetIndexOfMatchingShim()).With(instanceAction);
+            Shim shim2 = Shim.Replace(() => stubHelperTests.TestGetIndexOfMatchingShim()).With(instanceAction);
             PoseContext.Isolate(() => { }, shim, shim1, shim2);
 
             MethodInfo consoleMethodInfo = typeof(Console).GetMethod("Clear");
-            MethodInfo stubMethodInfo = typeof(StubHelperTests).GetMethod("TestGetMatchingShimIndex");
+            MethodInfo stubMethodInfo = typeof(StubHelperTests).GetMethod("TestGetIndexOfMatchingShim");
 
-            Assert.AreEqual(0, StubHelper.GetMatchingShimIndex(consoleMethodInfo, null));
-            Assert.AreEqual(1, StubHelper.GetMatchingShimIndex(stubMethodInfo, new StubHelperTests()));
-            Assert.AreEqual(2, StubHelper.GetMatchingShimIndex(stubMethodInfo, stubHelperTests));
+            Assert.AreEqual(0, StubHelper.GetIndexOfMatchingShim(consoleMethodInfo, null));
+            Assert.AreEqual(1, StubHelper.GetIndexOfMatchingShim(stubMethodInfo, new StubHelperTests()));
+            Assert.AreEqual(2, StubHelper.GetIndexOfMatchingShim(stubMethodInfo, stubHelperTests));
         }
 
         [TestMethod]
