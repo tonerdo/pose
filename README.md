@@ -59,6 +59,14 @@ class MyClass
 Shim classPropShim = Shim.Replace(() => Is.A<MyClass>().MyProperty).With((MyClass @this) => 100);
 ```
 
+### Shim constructor
+
+```csharp
+using Pose;
+
+Shim ctorShim = Shim.Replace(() => new MyClass()).With(() => new MyClass() { MyProperty = 10 });
+```
+
 ### Shim instance method of a Reference Type
 
 ```csharp
@@ -123,7 +131,6 @@ PoseContext.Isolate(() =>
 
 ## Roadmap
 
-* **Constructor Shimming** - Ability to create shims for constructors.
 * **Performance Improvements** - Pose can be used outside the context of unit tests. Better performance would make it suitable for use in production code, possibly to override legacy functionality.
 * **Exceptions Stack Trace** - Currently when exceptions are thrown in your own code under isolation, the supplied exception stack trace is quite confusing. Providing an undiluted exception stack trace is needed.
 
