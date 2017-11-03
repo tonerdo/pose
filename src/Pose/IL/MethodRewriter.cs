@@ -215,6 +215,14 @@ namespace Pose.IL
         private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
         {
             ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
+            if (PoseContext.StubCache.TryGetValue(constructorInfo, out DynamicMethod stub))
+            {
+                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
+                ilGenerator.Emit(OpCodes.Call, stub);
+                return;
+            }
+
             MethodBody methodBody = constructorInfo.GetMethodBody();
             if (methodBody == null)
             {
@@ -228,14 +236,24 @@ namespace Pose.IL
                 return;
             }
 
+            stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType());
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-            ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType()));
+            ilGenerator.Emit(OpCodes.Call, stub);
+            PoseContext.StubCache.TryAdd(constructorInfo, stub);
         }
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
         {
             MethodInfo methodInfo = memberInfo as MethodInfo;
+            if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
+            {
+                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+                ilGenerator.Emit(OpCodes.Call, stub);
+                return;
+            }
+
             MethodBody methodBody = methodInfo.GetMethodBody();
             if (methodBody == null)
             {
@@ -245,18 +263,20 @@ namespace Pose.IL
 
             if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
             {
-                DynamicMethod stub = instruction.OpCode == OpCodes.Call ?
+                stub = instruction.OpCode == OpCodes.Call ?
                     Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                PoseContext.StubCache.TryAdd(methodInfo, stub);
             }
             else if (instruction.OpCode == OpCodes.Ldftn)
             {
-                DynamicMethod stub = Stubs.GenerateStubForMethodPointer(methodInfo);
+                stub = Stubs.GenerateStubForMethodPointer(methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                PoseContext.StubCache.TryAdd(methodInfo, stub);
             }
             else
             {
