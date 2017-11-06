@@ -45,10 +45,9 @@ namespace Pose
 
         public static Shim Replace(Expression<Action> expression)
         {
-            MethodCallExpression methodCall = expression.Body as MethodCallExpression;
-            return new Shim(methodCall.Method, null)
+            return new Shim(ShimHelper.GetMethodFromExpression(expression.Body, out object instance), null)
             {
-                _instance = ShimHelper.GetObjectInstanceFromExpression(methodCall.Object)
+                _instance = instance
             };
         }
 

@@ -1,5 +1,8 @@
 using System;
+using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 
 using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -58,6 +61,40 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(ShimTests).GetMethod("TestReplace"), shim1.Original);
             Assert.AreSame(shimTests, shim1.Instance);
             Assert.AreEqual(actionInstance, shim1.Replacement);
+        }
+
+        [TestMethod]
+        public void TestReplacePropertyGetter()
+        {
+            Shim shim = Shim.Replace(() => Thread.CurrentThread.CurrentCulture);
+
+            Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).GetMethod, shim.Original);
+            Assert.IsNull(shim.Replacement);
+        }
+
+        /// <summary>
+        /// The C# compiler currently does not allow poperty setters in lambda expressions.
+        /// This helper method works around that by combining a property getter expression
+        /// and a value into a setter expression.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="lvalue"></param>
+        /// <param name="rvalue"></param>
+        /// <returns></returns>
+        private static Expression<Action> Assignment<T>(Expression<Func<T>> lvalue, T rvalue)
+        {
+            var value = Expression.Constant(rvalue, typeof(T));
+            var assign = Expression.Assign(lvalue.Body, value);
+            return Expression.Lambda<Action>(assign);
+        }
+
+        [TestMethod]
+        public void TestReplacePropertySetter()
+        {
+            Shim shim = Shim.Replace(Assignment(() => Is.A<Thread>().CurrentCulture, Is.A<CultureInfo>()));
+
+            Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).SetMethod, shim.Original);
+            Assert.IsNull(shim.Replacement);
         }
     }
 }

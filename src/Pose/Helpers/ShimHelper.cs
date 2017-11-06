@@ -15,6 +15,7 @@ namespace Pose.Helpers
             switch (expression.NodeType)
             {
                 case ExpressionType.MemberAccess:
+                {
                     MemberExpression memberExpression = expression as MemberExpression;
                     MemberInfo memberInfo = memberExpression.Member;
                     if (memberInfo.MemberType == MemberTypes.Property)
@@ -25,6 +26,7 @@ namespace Pose.Helpers
                     }
                     else
                         throw new NotImplementedException("Unsupported expression");
+                }
                 case ExpressionType.Call:
                     MethodCallExpression methodCallExpression = expression as MethodCallExpression;
                     instance = GetObjectInstanceFromExpression(methodCallExpression.Object);
@@ -33,6 +35,18 @@ namespace Pose.Helpers
                     NewExpression newExpression = expression as NewExpression;
                     instance = null;
                     return newExpression.Constructor;
+                case ExpressionType.Assign:
+                {
+                    BinaryExpression assignExpression = (BinaryExpression)expression;
+                    MemberExpression memberExpression = (MemberExpression)assignExpression.Left;
+                    MemberInfo memberInfo = memberExpression.Member;
+                    if (memberInfo.MemberType != MemberTypes.Property)
+                        throw new NotSupportedException("Unsupported expression");
+
+                    PropertyInfo propertyInfo = (PropertyInfo)memberInfo;
+                    instance = GetObjectInstanceFromExpression(memberExpression.Expression);
+                    return propertyInfo.GetSetMethod();
+                }
                 default:
                     throw new NotImplementedException("Unsupported expression");
             }
