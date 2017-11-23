@@ -1,5 +1,8 @@
 using System;
+using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 
 using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -58,6 +61,73 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(ShimTests).GetMethod("TestReplace"), shim1.Original);
             Assert.AreSame(shimTests, shim1.Instance);
             Assert.AreEqual(actionInstance, shim1.Replacement);
+        }
+
+        [TestMethod]
+        public void TestReplacePropertyGetter()
+        {
+            Shim shim = Shim.Replace(() => Thread.CurrentThread.CurrentCulture);
+
+            Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).GetMethod, shim.Original);
+            Assert.IsNull(shim.Replacement);
+        }
+
+        /// <summary>
+        /// The C# compiler currently does not allow poperty setters in lambda expressions.
+        /// This helper method works around that by combining a property getter expression
+        /// and a value into a setter expression.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="lvalue"></param>
+        /// <param name="rvalue"></param>
+        /// <returns></returns>
+        private static Expression<Action> Assignment<T>(Expression<Func<T>> lvalue, T rvalue)
+        {
+            var value = Expression.Constant(rvalue, typeof(T));
+            var assign = Expression.Assign(lvalue.Body, value);
+            return Expression.Lambda<Action>(assign);
+        }
+
+        [TestMethod]
+        public void TestReplacePropertySetter()
+        {
+            Shim shim = Shim.Replace(Assignment(() => Is.A<Thread>().CurrentCulture, Is.A<CultureInfo>()));
+
+            Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).SetMethod, shim.Original);
+            Assert.IsNull(shim.Replacement);
+        }
+        
+        
+        [TestMethod]
+        public void TestReplacePropertySetterAction()
+        {
+            var getterExecuted = false;
+            var getterShim = Shim.Replace(() => Is.A<Thread>().CurrentCulture)
+                .With((Thread t) =>
+                {
+                    getterExecuted = true;
+                    return t.CurrentCulture;
+                });
+            var setterExecuted = false;
+            var setterShim = Shim.Replace(Assignment(() => Is.A<Thread>().CurrentCulture, Is.A<CultureInfo>()))
+                .With((Thread t, CultureInfo value) =>
+                {
+                    setterExecuted = true;
+                    t.CurrentCulture = value;
+                });
+
+            var currentCultureProperty = typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo));
+            Assert.AreEqual(currentCultureProperty.GetMethod, getterShim.Original);
+            Assert.AreEqual(currentCultureProperty.SetMethod, setterShim.Original);
+
+            PoseContext.Isolate(() =>
+            {
+                var oldCulture = Thread.CurrentThread.CurrentCulture;
+                Thread.CurrentThread.CurrentCulture = oldCulture;
+            }, getterShim, setterShim);
+
+            Assert.IsTrue(getterExecuted, "Getter not executed");
+            Assert.IsTrue(setterExecuted, "Setter not executed");
         }
     }
 }
