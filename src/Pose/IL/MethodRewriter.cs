@@ -255,7 +255,7 @@ namespace Pose.IL
             }
 
             MethodBody methodBody = methodInfo.GetMethodBody();
-            if (methodBody == null)
+            if (methodBody == null && !methodInfo.IsAbstract)
             {
                 ilGenerator.Emit(instruction.OpCode, methodInfo);
                 return;
