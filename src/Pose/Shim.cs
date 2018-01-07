@@ -12,6 +12,7 @@ namespace Pose
         private MethodBase _original;
         private Delegate _replacement;
         private Object _instance;
+        private Type _type;
 
         internal MethodBase Original
         {
@@ -37,33 +38,42 @@ namespace Pose
             }
         }
 
-        private Shim(MethodBase original, Delegate replacement)
+        internal Type Type
+        {
+            get
+            {
+                return _type;
+            }
+        }
+
+        private Shim(MethodBase original, object instanceOrType)
         {
             _original = original;
-            _replacement = replacement;
+            if (instanceOrType is Type type)
+                _type = type;
+            else
+                _instance = instanceOrType;
         }
 
         public static Shim Replace(Expression<Action> expression)
-        {
-            return new Shim(ShimHelper.GetMethodFromExpression(expression.Body, out object instance), null)
-            {
-                _instance = instance
-            };
-        }
+            => ReplaceImpl(expression);
 
         public static Shim Replace<T>(Expression<Func<T>> expression)
+            => ReplaceImpl(expression);
+
+        private static Shim ReplaceImpl<T>(Expression<T> expression)
         {
-            return new Shim(ShimHelper.GetMethodFromExpression(expression.Body, out object instance), null)
-            {
-                _instance = instance
-            };
+            MethodBase methodBase = ShimHelper.GetMethodFromExpression(expression.Body, out object instance);
+            return new Shim(methodBase, instance);
         }
 
         private Shim WithImpl(Delegate replacement)
         {
             _replacement = replacement;
-            if (!ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method))
-                throw new Exception("Invalid shim method signature");
+            if (_instance != null)
+                ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method, _instance.GetType());
+            else
+                ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method, _type);
 
             return this;
         }

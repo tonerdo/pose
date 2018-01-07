@@ -4,101 +4,132 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
+using Pose.Exceptions;
 using Pose.Extensions;
 
 namespace Pose.Helpers
 {
     internal static class ShimHelper
     {
-        public static MethodBase GetMethodFromExpression(Expression expression, out Object instance)
+        public static MethodBase GetMethodFromExpression(Expression expression, out Object instanceOrType)
         {
             switch (expression.NodeType)
             {
                 case ExpressionType.MemberAccess:
-                {
-                    MemberExpression memberExpression = expression as MemberExpression;
-                    MemberInfo memberInfo = memberExpression.Member;
-                    if (memberInfo.MemberType == MemberTypes.Property)
                     {
-                        PropertyInfo propertyInfo = memberInfo as PropertyInfo;
-                        instance = GetObjectInstanceFromExpression(memberExpression.Expression);
-                        return propertyInfo.GetGetMethod();
+                        MemberExpression memberExpression = expression as MemberExpression;
+                        MemberInfo memberInfo = memberExpression.Member;
+                        if (memberInfo.MemberType == MemberTypes.Property)
+                        {
+                            PropertyInfo propertyInfo = memberInfo as PropertyInfo;
+                            instanceOrType = GetObjectInstanceOrType(memberExpression.Expression);
+                            return propertyInfo.GetGetMethod();
+                        }
+                        else
+                            throw new NotImplementedException("Unsupported expression");
                     }
-                    else
-                        throw new NotImplementedException("Unsupported expression");
-                }
                 case ExpressionType.Call:
                     MethodCallExpression methodCallExpression = expression as MethodCallExpression;
-                    instance = GetObjectInstanceFromExpression(methodCallExpression.Object);
+                    instanceOrType = GetObjectInstanceOrType(methodCallExpression.Object);
                     return methodCallExpression.Method;
                 case ExpressionType.New:
                     NewExpression newExpression = expression as NewExpression;
-                    instance = null;
+                    instanceOrType = null;
                     return newExpression.Constructor;
                 case ExpressionType.Assign:
-                {
-                    BinaryExpression assignExpression = (BinaryExpression)expression;
-                    MemberExpression memberExpression = (MemberExpression)assignExpression.Left;
-                    MemberInfo memberInfo = memberExpression.Member;
-                    if (memberInfo.MemberType != MemberTypes.Property)
-                        throw new NotSupportedException("Unsupported expression");
+                    {
+                        BinaryExpression assignExpression = (BinaryExpression)expression;
+                        MemberExpression memberExpression = (MemberExpression)assignExpression.Left;
+                        MemberInfo memberInfo = memberExpression.Member;
+                        if (memberInfo.MemberType != MemberTypes.Property)
+                            throw new NotSupportedException("Unsupported expression");
 
-                    PropertyInfo propertyInfo = (PropertyInfo)memberInfo;
-                    instance = GetObjectInstanceFromExpression(memberExpression.Expression);
-                    return propertyInfo.GetSetMethod();
-                }
+                        PropertyInfo propertyInfo = (PropertyInfo)memberInfo;
+                        instanceOrType = GetObjectInstanceOrType(memberExpression.Expression);
+                        return propertyInfo.GetSetMethod();
+                    }
                 default:
                     throw new NotImplementedException("Unsupported expression");
             }
         }
 
-        public static bool ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement)
+        public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type)
         {
-            List<Type> parameterTypes = new List<Type>();
-            if (!original.IsStatic && !original.IsConstructor)
+            bool isValueType = original.IsForValueType();
+            bool isStatic = original.IsStatic;
+            bool isConstructor = original.IsConstructor;
+            bool isStaticOrConstructor = isStatic || isConstructor;
+
+            Type vaildReturnType = isConstructor ? original.DeclaringType : (original as MethodInfo).ReturnType;
+            Type shimReturnType = replacement.ReturnType;
+
+            Type validOwningType = type;
+            Type shimOwningType = isStaticOrConstructor
+                ? validOwningType : replacement.GetParameters().Select(p => p.ParameterType).FirstOrDefault();
+
+            var validParameterTypes = original.GetParameters().Select(p => p.ParameterType);
+            var shimParameterTypes = replacement.GetParameters()
+                                        .Select(p => p.ParameterType)
+                                        .Skip(isStaticOrConstructor ? 0 : 1);
+
+            if (vaildReturnType != shimReturnType)
+                throw new InvalidShimSignatureException("Mismatched return types");
+
+            if (!isStaticOrConstructor)
             {
-                if (original.IsForValueType())
-                    parameterTypes.Add(original.DeclaringType.MakeByRefType());
-                else
-                    parameterTypes.Add(original.DeclaringType);
+                if (isValueType && !shimOwningType.IsByRef)
+                    throw new InvalidShimSignatureException("ValueType instances must be passed by ref");
             }
 
-            parameterTypes.AddRange(original.GetParameters().Select(p => p.ParameterType));
+            if ((isValueType && !isStaticOrConstructor ? validOwningType.MakeByRefType() : validOwningType) != shimOwningType)
+                throw new InvalidShimSignatureException("Mismatched owning types");
 
-            string validSignature = string.Format("{0} ({1})",
-                original.IsConstructor ? original.DeclaringType : (original as MethodInfo).ReturnType,
-                string.Join<Type>(", ", parameterTypes));
+            if (validParameterTypes.Count() != shimParameterTypes.Count())
+                throw new InvalidShimSignatureException("Parameters count do not match");
 
-            string shimSignature = string.Format("{0} ({1})",
-                replacement.ReturnType,
-                string.Join<Type>(", ", replacement.GetParameters().Select(p => p.ParameterType)));
-
-            return shimSignature == validSignature;
+            for (int i = 0; i < validParameterTypes.Count(); i++)
+            {
+                if (validParameterTypes.ElementAt(i) != shimParameterTypes.ElementAt(i))
+                    throw new InvalidShimSignatureException($"Parameter type at {i} do not match");
+            }
         }
 
-        public static object GetObjectInstanceFromExpression(Expression expression)
+        public static object GetObjectInstanceOrType(Expression expression)
         {
-            if (!(expression is MemberExpression))
-                return null;
-
-            object instance = null;
-            MemberExpression memberExpression = expression as MemberExpression;
-            ConstantExpression constantExpression = memberExpression.Expression as ConstantExpression;
-            if (memberExpression.Member.MemberType == MemberTypes.Field)
+            object instanceOrType = null;
+            switch (expression?.NodeType)
             {
-                FieldInfo fieldInfo = (memberExpression.Member as FieldInfo);
-                var obj = fieldInfo.IsStatic ? null : constantExpression.Value;
-                instance = fieldInfo.GetValue(obj);
-            }
-            else if (memberExpression.Member.MemberType == MemberTypes.Property)
-            {
-                PropertyInfo propertyInfo = (memberExpression.Member as PropertyInfo);
-                var obj = propertyInfo.GetMethod.IsStatic ? null : constantExpression.Value;
-                instance = propertyInfo.GetValue(obj);
+                case ExpressionType.MemberAccess:
+                    {
+                        MemberExpression memberExpression = expression as MemberExpression;
+                        ConstantExpression constantExpression = memberExpression.Expression as ConstantExpression;
+                        if (memberExpression.Member.MemberType == MemberTypes.Field)
+                        {
+                            FieldInfo fieldInfo = (memberExpression.Member as FieldInfo);
+                            var obj = fieldInfo.IsStatic ? null : constantExpression.Value;
+                            instanceOrType = fieldInfo.GetValue(obj);
+                        }
+                        else if (memberExpression.Member.MemberType == MemberTypes.Property)
+                        {
+                            PropertyInfo propertyInfo = (memberExpression.Member as PropertyInfo);
+                            var obj = propertyInfo.GetMethod.IsStatic ? null : constantExpression.Value;
+                            instanceOrType = propertyInfo.GetValue(obj);
+                        }
+                        EnsureInstanceNotValueType(instanceOrType);
+                        break;
+                    }
+                case ExpressionType.Call:
+                    {
+                        MethodCallExpression methodCallExpression = expression as MethodCallExpression;
+                        MethodInfo methodInfo = methodCallExpression.Method;
+                        instanceOrType = methodInfo.GetGenericArguments().FirstOrDefault();
+                        break;
+                    }
+                default:
+                    return null;
             }
 
-            EnsureInstanceNotValueType(instance);
-            return instance;
+            return instanceOrType;
         }
 
         private static void EnsureInstanceNotValueType(object instance)
