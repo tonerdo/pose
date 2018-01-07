@@ -4,6 +4,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using Pose.Extensions;
+
 namespace Pose.Helpers
 {
     internal static class StubHelper
@@ -25,7 +27,7 @@ namespace Pose.Helpers
         public static MethodInfo GetShimReplacementMethod(int index)
             => PoseContext.Shims[index].Replacement.Method;
 
-        public static int GetIndexOfMatchingShim(MethodBase methodBase, object obj)
+        public static int GetIndexOfMatchingShim(MethodBase methodBase, Type type, object obj)
         {
             if (methodBase.IsStatic || obj == null)
                 return Array.FindIndex(PoseContext.Shims, s => s.Original == methodBase);
@@ -35,10 +37,13 @@ namespace Pose.Helpers
 
             if (index == -1)
                 return Array.FindIndex(PoseContext.Shims,
-                            s => s.Original == methodBase && s.Instance == null);
+                            s => SignatureEquals(s, type, methodBase) && s.Instance == null);
 
             return index;
         }
+
+        public static int GetIndexOfMatchingShim(MethodBase methodBase, object obj)
+            => GetIndexOfMatchingShim(methodBase, methodBase.DeclaringType, obj);
 
         public static MethodInfo GetRuntimeMethodForVirtual(Type type, MethodInfo methodInfo)
         {
@@ -48,5 +53,22 @@ namespace Pose.Helpers
         }
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;
+
+        private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
+        {
+            if (shim.Type == null || type == shim.Type)
+                return $"{shim.Type}::{shim.Original.ToString()}" == $"{type}::{method.ToString()}";
+
+            if (type.IsSubclassOf(shim.Type))
+            {
+                if ((shim.Original.IsAbstract || !shim.Original.IsVirtual)
+                        || (shim.Original.IsVirtual && !method.IsOverride()))
+                {
+                    return $"{shim.Original.ToString()}" == $"{method.ToString()}";
+                }
+            }
+
+            return false;
+        }
     }
 }

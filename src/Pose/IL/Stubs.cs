@@ -55,7 +55,7 @@ namespace Pose.IL
 
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(methodInfo.IsStatic || methodInfo.IsForValueType() ? OpCodes.Ldnull : OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim"));
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim", new Type[] { typeof(MethodBase), typeof(Object) }));
             ilGenerator.Emit(OpCodes.Stloc_1);
             ilGenerator.Emit(OpCodes.Ldloc_1);
             ilGenerator.Emit(OpCodes.Ldc_I4_M1);
@@ -119,6 +119,7 @@ namespace Pose.IL
             ilGenerator.DeclareLocal(typeof(MethodInfo));
             ilGenerator.DeclareLocal(typeof(int));
             ilGenerator.DeclareLocal(typeof(IntPtr));
+            ilGenerator.DeclareLocal(typeof(Type));
 
             Label rewriteLabel = ilGenerator.DefineLabel();
             Label returnLabel = ilGenerator.DefineLabel();
@@ -130,13 +131,16 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Stloc_0);
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Call, typeof(Object).GetMethod("GetType"));
+            ilGenerator.Emit(OpCodes.Stloc_3);
+            ilGenerator.Emit(OpCodes.Ldloc_3);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetRuntimeMethodForVirtual"));
             ilGenerator.Emit(OpCodes.Stloc_0);
 
             ilGenerator.Emit(OpCodes.Ldloc_0);
+            ilGenerator.Emit(OpCodes.Ldloc_3);
             ilGenerator.Emit(methodInfo.IsForValueType() ? OpCodes.Ldnull : OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim"));
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim", new Type[] { typeof(MethodBase), typeof(Type), typeof(Object) }));
             ilGenerator.Emit(OpCodes.Stloc_1);
             ilGenerator.Emit(OpCodes.Ldloc_1);
             ilGenerator.Emit(OpCodes.Ldc_I4_M1);
@@ -219,7 +223,7 @@ namespace Pose.IL
 
             ilGenerator.Emit(OpCodes.Ldloc_1);
             ilGenerator.Emit(OpCodes.Ldnull);
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim"));
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetIndexOfMatchingShim", new Type[] { typeof(MethodBase), typeof(Object) }));
             ilGenerator.Emit(OpCodes.Stloc_3);
             ilGenerator.Emit(OpCodes.Ldloc_3);
             ilGenerator.Emit(OpCodes.Ldc_I4_M1);
