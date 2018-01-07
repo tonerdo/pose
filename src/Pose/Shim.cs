@@ -70,11 +70,7 @@ namespace Pose
         private Shim WithImpl(Delegate replacement)
         {
             _replacement = replacement;
-            if (_instance != null)
-                ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method, _instance.GetType());
-            else
-                ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method, _type);
-
+            ShimHelper.ValidateReplacementMethodSignature(this._original, this._replacement.Method, _instance?.GetType() ?? _type);
             return this;
         }
     }

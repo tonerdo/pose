@@ -15,12 +15,12 @@ namespace Pose.Tests
         [TestMethod]
         public void TestStaticMethodRewrite()
         {
-            MethodInfo methodInfo = typeof(StubHelper).GetMethod("GetMethodPointer");
+            MethodInfo methodInfo = typeof(DateTime).GetMethod("get_Now");
             MethodRewriter methodRewriter = MethodRewriter.CreateRewriter(methodInfo);
             DynamicMethod dynamicMethod = methodRewriter.Rewrite() as DynamicMethod;
 
-            Delegate func = dynamicMethod.CreateDelegate(typeof(Func<MethodBase, IntPtr>));
-            Assert.AreEqual(StubHelper.GetMethodPointer(methodInfo), func.DynamicInvoke(methodInfo));
+            Delegate func = dynamicMethod.CreateDelegate(typeof(Func<DateTime>));
+            Assert.AreEqual(DateTime.Now.ToString("yyyyMMdd_HHmm"), ((DateTime)func.DynamicInvoke()).ToString("yyyyMMdd_HHmm"));
         }
 
         [TestMethod]

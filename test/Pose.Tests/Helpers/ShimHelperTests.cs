@@ -39,38 +39,13 @@ namespace Pose.Tests
         }
 
         [TestMethod]
-        public void TestValidateReplacementMethodSignatureInValid()
-        {
-            MethodBase original = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
-            MethodInfo replacement = new Action(() => { }).Method;
-
-            Assert.AreEqual<bool>(false, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
-
-            original = typeof(DateTime).GetMethod("Add");
-            Assert.AreEqual<bool>(false, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
-        }
-
-        [TestMethod]
-        public void TestValidateReplacementMethodSignatureValid()
-        {
-            MethodBase original = typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) });
-            MethodInfo replacement = new Action<string>((s) => { }).Method;
-
-            Assert.AreEqual<bool>(true, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
-
-            original = typeof(string).GetMethod("Contains");
-            replacement = new Func<string, string, bool>((d, t) => true).Method;
-            Assert.AreEqual<bool>(true, ShimHelper.ValidateReplacementMethodSignature(original, replacement));
-        }
-
-        [TestMethod]
         public void TestGetObjectInstanceFromExpressionValueType()
         {
             DateTime dateTime = new DateTime();
             Expression<Func<DateTime>> expression = () => dateTime.AddDays(2);
 
             Assert.ThrowsException<NotSupportedException>(
-                () => ShimHelper.GetObjectInstanceFromExpression((expression.Body as MethodCallExpression).Object));
+                () => ShimHelper.GetObjectInstanceOrType((expression.Body as MethodCallExpression).Object));
         }
 
         [TestMethod]
@@ -78,7 +53,7 @@ namespace Pose.Tests
         {
             ShimHelperTests shimHelperTests = new ShimHelperTests();
             Expression<Action> expression = () => shimHelperTests.TestGetObjectInstanceFromExpression();
-            var instance = ShimHelper.GetObjectInstanceFromExpression((expression.Body as MethodCallExpression).Object);
+            var instance = ShimHelper.GetObjectInstanceOrType((expression.Body as MethodCallExpression).Object);
 
             Assert.IsNotNull(instance);
             Assert.AreEqual<Type>(typeof(ShimHelperTests), instance.GetType());

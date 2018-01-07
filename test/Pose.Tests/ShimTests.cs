@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 
+using Pose.Exceptions;
 using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -39,9 +40,9 @@ namespace Pose.Tests
         {
             ShimTests shimTests = new ShimTests();
             Shim shim = Shim.Replace(() => shimTests.TestReplace());
-            Assert.ThrowsException<Exception>(
+            Assert.ThrowsException<InvalidShimSignatureException>(
                 () => Shim.Replace(() => shimTests.TestReplace()).With(() => { }));
-            Assert.ThrowsException<Exception>(
+            Assert.ThrowsException<InvalidShimSignatureException>(
                 () => Shim.Replace(() => Console.WriteLine(Is.A<string>())).With(() => { }));
         }
 
