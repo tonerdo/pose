@@ -11,7 +11,7 @@ namespace Pose.Helpers
 {
     internal static class ShimHelper
     {
-        public static MethodBase GetMethodFromExpression(Expression expression, out Object instanceOrType)
+        public static MethodBase GetMethodFromExpression(Expression expression, bool setter, out Object instanceOrType)
         {
             switch (expression.NodeType)
             {
@@ -23,7 +23,7 @@ namespace Pose.Helpers
                         {
                             PropertyInfo propertyInfo = memberInfo as PropertyInfo;
                             instanceOrType = GetObjectInstanceOrType(memberExpression.Expression);
-                            return propertyInfo.GetGetMethod();
+                            return setter ? propertyInfo.GetSetMethod() : propertyInfo.GetGetMethod();
                         }
                         else
                             throw new NotImplementedException("Unsupported expression");
@@ -53,7 +53,7 @@ namespace Pose.Helpers
             }
         }
 
-        public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type)
+        public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type, bool setter)
         {
             bool isValueType = original.IsForValueType();
             bool isStatic = original.IsStatic;
@@ -61,6 +61,7 @@ namespace Pose.Helpers
             bool isStaticOrConstructor = isStatic || isConstructor;
 
             Type vaildReturnType = isConstructor ? original.DeclaringType : (original as MethodInfo).ReturnType;
+            vaildReturnType = setter ? typeof(void) : vaildReturnType;
             Type shimReturnType = replacement.ReturnType;
 
             Type validOwningType = type;
