@@ -36,18 +36,6 @@ namespace Pose.Helpers
                     NewExpression newExpression = expression as NewExpression;
                     instanceOrType = null;
                     return newExpression.Constructor;
-                case ExpressionType.Assign:
-                    {
-                        BinaryExpression assignExpression = (BinaryExpression)expression;
-                        MemberExpression memberExpression = (MemberExpression)assignExpression.Left;
-                        MemberInfo memberInfo = memberExpression.Member;
-                        if (memberInfo.MemberType != MemberTypes.Property)
-                            throw new NotSupportedException("Unsupported expression");
-
-                        PropertyInfo propertyInfo = (PropertyInfo)memberInfo;
-                        instanceOrType = GetObjectInstanceOrType(memberExpression.Expression);
-                        return propertyInfo.GetSetMethod();
-                    }
                 default:
                     throw new NotImplementedException("Unsupported expression");
             }

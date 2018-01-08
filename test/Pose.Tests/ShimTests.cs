@@ -73,26 +73,10 @@ namespace Pose.Tests
             Assert.IsNull(shim.Replacement);
         }
 
-        /// <summary>
-        /// The C# compiler currently does not allow poperty setters in lambda expressions.
-        /// This helper method works around that by combining a property getter expression
-        /// and a value into a setter expression.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="lvalue"></param>
-        /// <param name="rvalue"></param>
-        /// <returns></returns>
-        private static Expression<Action> Assignment<T>(Expression<Func<T>> lvalue, T rvalue)
-        {
-            var value = Expression.Constant(rvalue, typeof(T));
-            var assign = Expression.Assign(lvalue.Body, value);
-            return Expression.Lambda<Action>(assign);
-        }
-
         [TestMethod]
         public void TestReplacePropertySetter()
         {
-            Shim shim = Shim.Replace(Assignment(() => Is.A<Thread>().CurrentCulture, Is.A<CultureInfo>()));
+            Shim shim = Shim.Replace(() => Is.A<Thread>().CurrentCulture, true);
 
             Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).SetMethod, shim.Original);
             Assert.IsNull(shim.Replacement);
@@ -110,7 +94,7 @@ namespace Pose.Tests
                     return t.CurrentCulture;
                 });
             var setterExecuted = false;
-            var setterShim = Shim.Replace(Assignment(() => Is.A<Thread>().CurrentCulture, Is.A<CultureInfo>()))
+            var setterShim = Shim.Replace(() => Is.A<Thread>().CurrentCulture, true)
                 .With((Thread t, CultureInfo value) =>
                 {
                     setterExecuted = true;
