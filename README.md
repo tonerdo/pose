@@ -45,6 +45,14 @@ using Pose;
 Shim dateTimeShim = Shim.Replace(() => DateTime.Now).With(() => new DateTime(2004, 4, 4));
 ```
 
+### Shim static property setter
+
+```csharp
+using Pose;
+
+Shim setterShim = Shim.Replace(() => Console.Title, true).With((string title) => { Console.Title = "My Title"; });
+```
+
 ### Shim instance property getter
 
 ```csharp
@@ -57,6 +65,14 @@ class MyClass
 }
 
 Shim classPropShim = Shim.Replace(() => Is.A<MyClass>().MyProperty).With((MyClass @this) => 100);
+```
+
+### Shim instance property setter
+
+```csharp
+using Pose;
+
+Shim classPropShim = Shim.Replace(() => Is.A<MyClass>().MyProperty, true).With((MyClass @this, int prop) => { @this.MyProperty = prop * 10; });
 ```
 
 ### Shim constructor
