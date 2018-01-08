@@ -13,12 +13,13 @@ namespace Pose.IL
     internal class MethodRewriter
     {
         private MethodBase _method;
+        private List<string> _instructions;
 
         private MethodRewriter() { }
 
         public static MethodRewriter CreateRewriter(MethodBase method)
         {
-            return new MethodRewriter { _method = method };
+            return new MethodRewriter { _method = method, _instructions = new List<string>() };
         }
 
         public MethodBase Rewrite()
@@ -119,70 +120,101 @@ namespace Pose.IL
                 }
             }
 
+            PoseContext.Instructions = _instructions;
             return dynamicMethod;
         }
 
+        private void EmitILString(OpCode opCode, object operand, int offset)
+            => _instructions.Add($"IL_{offset.ToString("x4")}: {opCode} {operand}");
+
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode);
+        {
+            ilGenerator.Emit(instruction.OpCode);
+            EmitILString(instruction.OpCode, null, ilGenerator.ILOffset);
+        }
 
         private void EmitILForInlineI(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (int)instruction.Operand);
+        {
+            ilGenerator.Emit(instruction.OpCode, (int)instruction.Operand);
+            EmitILString(instruction.OpCode, (int)instruction.Operand, ilGenerator.ILOffset);
+        }
 
         private void EmitILForInlineI8(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (long)instruction.Operand);
+        {
+            ilGenerator.Emit(instruction.OpCode, (long)instruction.Operand);
+            EmitILString(instruction.OpCode, (long)instruction.Operand, ilGenerator.ILOffset);
+        }
 
         private void EmitILForShortInlineI(ILGenerator ilGenerator, Instruction instruction)
         {
             if (instruction.OpCode == OpCodes.Ldc_I4_S)
+            {
                 ilGenerator.Emit(instruction.OpCode, (sbyte)instruction.Operand);
+                EmitILString(instruction.OpCode, (sbyte)instruction.Operand, ilGenerator.ILOffset);
+            }
             else
+            {
                 ilGenerator.Emit(instruction.OpCode, (byte)instruction.Operand);
+                EmitILString(instruction.OpCode, (byte)instruction.Operand, ilGenerator.ILOffset);
+            }
         }
 
         private void EmitILForInlineR(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (double)instruction.Operand);
+        {
+            ilGenerator.Emit(instruction.OpCode, (double)instruction.Operand);
+            EmitILString(instruction.OpCode, (double)instruction.Operand, ilGenerator.ILOffset);
+        }
 
         private void EmitILForShortInlineR(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (float)instruction.Operand);
+        {
+            ilGenerator.Emit(instruction.OpCode, (float)instruction.Operand);
+            EmitILString(instruction.OpCode, (float)instruction.Operand, ilGenerator.ILOffset);
+        }
 
         private void EmitILForInlineString(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (string)instruction.Operand);
+        {
+            ilGenerator.Emit(instruction.OpCode, (string)instruction.Operand);
+            EmitILString(instruction.OpCode, (string)instruction.Operand, ilGenerator.ILOffset);
+        }
 
         private void EmitILForInlineBrTarget(ILGenerator ilGenerator,
             Instruction instruction, Dictionary<int, Label> targetInstructions)
         {
             Label targetLabel = targetInstructions[(instruction.Operand as Instruction).Offset];
+            OpCode opCode = instruction.OpCode;
+
             // Offset values could change and not be short form anymore
             if (instruction.OpCode == OpCodes.Br_S)
-                ilGenerator.Emit(OpCodes.Br, targetLabel);
+                opCode = OpCodes.Br;
             else if (instruction.OpCode == OpCodes.Brfalse_S)
-                ilGenerator.Emit(OpCodes.Brfalse, targetLabel);
+                opCode = OpCodes.Brfalse;
             else if (instruction.OpCode == OpCodes.Brtrue_S)
-                ilGenerator.Emit(OpCodes.Brtrue, targetLabel);
+                opCode = OpCodes.Brtrue;
             else if (instruction.OpCode == OpCodes.Beq_S)
-                ilGenerator.Emit(OpCodes.Beq, targetLabel);
+                opCode = OpCodes.Beq;
             else if (instruction.OpCode == OpCodes.Bge_S)
-                ilGenerator.Emit(OpCodes.Bge, targetLabel);
+                opCode = OpCodes.Bge;
             else if (instruction.OpCode == OpCodes.Bgt_S)
-                ilGenerator.Emit(OpCodes.Bgt, targetLabel);
+                opCode = OpCodes.Bgt;
             else if (instruction.OpCode == OpCodes.Ble_S)
-                ilGenerator.Emit(OpCodes.Ble, targetLabel);
+                opCode = OpCodes.Ble;
             else if (instruction.OpCode == OpCodes.Blt_S)
-                ilGenerator.Emit(OpCodes.Blt, targetLabel);
+                opCode = OpCodes.Blt;
             else if (instruction.OpCode == OpCodes.Bne_Un_S)
-                ilGenerator.Emit(OpCodes.Bne_Un, targetLabel);
+                opCode = OpCodes.Bne_Un;
             else if (instruction.OpCode == OpCodes.Bge_Un_S)
-                ilGenerator.Emit(OpCodes.Bge_Un, targetLabel);
+                opCode = OpCodes.Bge_Un;
             else if (instruction.OpCode == OpCodes.Bgt_Un_S)
-                ilGenerator.Emit(OpCodes.Bgt_Un, targetLabel);
+                opCode = OpCodes.Bgt_Un;
             else if (instruction.OpCode == OpCodes.Ble_Un_S)
-                ilGenerator.Emit(OpCodes.Ble_Un, targetLabel);
+                opCode = OpCodes.Ble_Un;
             else if (instruction.OpCode == OpCodes.Blt_Un_S)
-                ilGenerator.Emit(OpCodes.Blt_Un, targetLabel);
+                opCode = OpCodes.Blt_Un;
             else if (instruction.OpCode == OpCodes.Leave_S)
-                ilGenerator.Emit(OpCodes.Leave, targetLabel);
-            else
-                ilGenerator.Emit(instruction.OpCode, targetLabel);
+                opCode = OpCodes.Leave;
+
+            ilGenerator.Emit(opCode, targetLabel);
+            EmitILString(opCode, targetLabel, ilGenerator.ILOffset);
         }
 
         private void EmitILForInlineSwitch(ILGenerator ilGenerator,
@@ -193,6 +225,7 @@ namespace Pose.IL
             for (int i = 0; i < switchInstructions.Length; i++)
                 targetLabels[i] = targetInstructions[switchInstructions[i].Offset];
             ilGenerator.Emit(instruction.OpCode, targetLabels);
+            EmitILString(instruction.OpCode, targetLabels, ilGenerator.ILOffset);
         }
 
         private void EmitILForInlineVar(ILGenerator ilGenerator, Instruction instruction)
@@ -207,9 +240,15 @@ namespace Pose.IL
             }
 
             if (instruction.OpCode.OperandType == OperandType.ShortInlineVar)
+            {
                 ilGenerator.Emit(instruction.OpCode, (byte)index);
+                EmitILString(instruction.OpCode, (byte)index, ilGenerator.ILOffset);
+            }
             else
+            {
                 ilGenerator.Emit(instruction.OpCode, (short)index);
+                EmitILString(instruction.OpCode, (short)index, ilGenerator.ILOffset);
+            }
         }
 
         private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
@@ -218,8 +257,11 @@ namespace Pose.IL
             if (PoseContext.StubCache.TryGetValue(constructorInfo, out DynamicMethod stub))
             {
                 ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+                EmitILString(OpCodes.Ldtoken, constructorInfo, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
+                EmitILString(OpCodes.Ldtoken, constructorInfo.DeclaringType, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                EmitILString(OpCodes.Call, stub, ilGenerator.ILOffset);
                 return;
             }
 
@@ -227,19 +269,24 @@ namespace Pose.IL
             if (methodBody == null)
             {
                 ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                EmitILString(instruction.OpCode, constructorInfo, ilGenerator.ILOffset);
                 return;
             }
 
             if (instruction.OpCode != OpCodes.Newobj && instruction.OpCode != OpCodes.Call)
             {
                 ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                EmitILString(instruction.OpCode, constructorInfo, ilGenerator.ILOffset);
                 return;
             }
 
             stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType());
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
+            EmitILString(OpCodes.Ldtoken, constructorInfo, ilGenerator.ILOffset);
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
+            EmitILString(OpCodes.Ldtoken, constructorInfo.DeclaringType, ilGenerator.ILOffset);
             ilGenerator.Emit(OpCodes.Call, stub);
+            EmitILString(OpCodes.Call, stub, ilGenerator.ILOffset);
             PoseContext.StubCache.TryAdd(constructorInfo, stub);
         }
 
@@ -249,8 +296,11 @@ namespace Pose.IL
             if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
             {
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                EmitILString(OpCodes.Ldtoken, methodInfo, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+                EmitILString(OpCodes.Ldtoken, methodInfo.DeclaringType, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                EmitILString(OpCodes.Call, stub, ilGenerator.ILOffset);
                 return;
             }
 
@@ -258,6 +308,7 @@ namespace Pose.IL
             if (methodBody == null && !methodInfo.IsAbstract)
             {
                 ilGenerator.Emit(instruction.OpCode, methodInfo);
+                EmitILString(instruction.OpCode, methodInfo, ilGenerator.ILOffset);
                 return;
             }
 
@@ -266,21 +317,28 @@ namespace Pose.IL
                 stub = instruction.OpCode == OpCodes.Call ?
                     Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                EmitILString(OpCodes.Ldtoken, methodInfo, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+                EmitILString(OpCodes.Ldtoken, methodInfo.DeclaringType, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                EmitILString(OpCodes.Call, stub, ilGenerator.ILOffset);
                 PoseContext.StubCache.TryAdd(methodInfo, stub);
             }
             else if (instruction.OpCode == OpCodes.Ldftn)
             {
                 stub = Stubs.GenerateStubForMethodPointer(methodInfo);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+                EmitILString(OpCodes.Ldtoken, methodInfo, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+                EmitILString(OpCodes.Ldtoken, methodInfo.DeclaringType, ilGenerator.ILOffset);
                 ilGenerator.Emit(OpCodes.Call, stub);
+                EmitILString(OpCodes.Call, stub, ilGenerator.ILOffset);
                 PoseContext.StubCache.TryAdd(methodInfo, stub);
             }
             else
             {
                 ilGenerator.Emit(instruction.OpCode, methodInfo);
+                EmitILString(instruction.OpCode, methodInfo, ilGenerator.ILOffset);
             }
         }
 
@@ -290,11 +348,13 @@ namespace Pose.IL
             if (memberInfo.MemberType == MemberTypes.Field)
             {
                 ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as FieldInfo);
+                EmitILString(instruction.OpCode, (MemberInfo)instruction.Operand as FieldInfo, ilGenerator.ILOffset);
             }
             else if (memberInfo.MemberType == MemberTypes.TypeInfo
                 || memberInfo.MemberType == MemberTypes.NestedType)
             {
                 ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as TypeInfo);
+                EmitILString(instruction.OpCode, (MemberInfo)instruction.Operand as TypeInfo, ilGenerator.ILOffset);
             }
             else if (memberInfo.MemberType == MemberTypes.Constructor)
             {
