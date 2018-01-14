@@ -143,7 +143,6 @@ PoseContext.Isolate(() =>
 
 * **Breakpoints** - At this time any breakpoints set anywhere in the isolated code and its execution path will not be hit. However, breakpoints set within a shim replacement delegate are hit.
 * **Exceptions** - At this time all unhandled exceptions thrown in isolated code and its execution path are always wrapped in `System.Reflection.TargetInvocationException`.
-* **Property Setters** - Unlike Microsoft Fakes, Pose cannot create shims for property setters.
 
 ## Roadmap
 
