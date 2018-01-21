@@ -1,6 +1,8 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -21,292 +23,979 @@ namespace Pose.IL
             return new MethodRewriter { _method = method };
         }
 
-        public MethodBase Rewrite()
+        public Delegate Rewrite()
         {
-            List<Type> parameterTypes = new List<Type>();
-            if (!_method.IsStatic)
-            {
-                if (_method.IsForValueType())
-                    parameterTypes.Add(_method.DeclaringType.MakeByRefType());
-                else
-                    parameterTypes.Add(_method.DeclaringType);
-            }
-
-            parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
-            Type returnType = _method.IsConstructor ? typeof(void) : (_method as MethodInfo).ReturnType;
-
-            DynamicMethod dynamicMethod = new DynamicMethod(
-                string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
-                returnType,
-                parameterTypes.ToArray(),
-                StubHelper.GetOwningModule(),
-                true);
-
-            MethodDisassembler disassembler = new MethodDisassembler(_method);
-            IList<LocalVariableInfo> locals = _method.GetMethodBody().LocalVariables;
-            ILGenerator ilGenerator = dynamicMethod.GetILGenerator();
-
-            var instructions = disassembler.GetILInstructions();
-            Dictionary<int, Label> targetInstructions = new Dictionary<int, Label>();
-
-            foreach (var local in locals)
-                ilGenerator.DeclareLocal(local.LocalType, local.IsPinned);
+            State state = new State(_method);
+            var instructions = _method.GetInstructions();
+            var targets = new Dictionary<int, LabelTarget>();
 
             var ifTargets = instructions
                 .Where(i => (i.Operand as Instruction) != null)
                 .Select(i => (i.Operand as Instruction));
 
             foreach (Instruction instruction in ifTargets)
-                targetInstructions.TryAdd(instruction.Offset, ilGenerator.DefineLabel());
-
-            var switchTargets = instructions
-                .Where(i => (i.Operand as Instruction[]) != null)
-                .Select(i => (i.Operand as Instruction[]));
-
-            foreach (Instruction[] _instructions in switchTargets)
-            {
-                foreach (Instruction _instruction in _instructions)
-                    targetInstructions.TryAdd(_instruction.Offset, ilGenerator.DefineLabel());
-            }
+                targets.TryAdd(instruction.Offset, Expression.Label());
 
             foreach (var instruction in instructions)
             {
-                if (targetInstructions.TryGetValue(instruction.Offset, out Label label))
-                    ilGenerator.MarkLabel(label);
+                Debug.WriteLine(instruction);
 
-                switch (instruction.OpCode.OperandType)
+                if (targets.TryGetValue(instruction.Offset, out LabelTarget label))
                 {
-                    case OperandType.InlineNone:
-                        EmitILForInlineNone(ilGenerator, instruction);
-                        break;
-                    case OperandType.InlineI:
-                        EmitILForInlineI(ilGenerator, instruction);
-                        break;
-                    case OperandType.InlineI8:
-                        EmitILForInlineI8(ilGenerator, instruction);
-                        break;
-                    case OperandType.ShortInlineI:
-                        EmitILForShortInlineI(ilGenerator, instruction);
-                        break;
-                    case OperandType.InlineR:
-                        EmitILForInlineR(ilGenerator, instruction);
-                        break;
-                    case OperandType.ShortInlineR:
-                        EmitILForShortInlineR(ilGenerator, instruction);
-                        break;
-                    case OperandType.InlineString:
-                        EmitILForInlineString(ilGenerator, instruction);
-                        break;
-                    case OperandType.ShortInlineBrTarget:
-                    case OperandType.InlineBrTarget:
-                        EmitILForInlineBrTarget(ilGenerator, instruction, targetInstructions);
-                        break;
-                    case OperandType.InlineSwitch:
-                        EmitILForInlineSwitch(ilGenerator, instruction, targetInstructions);
-                        break;
-                    case OperandType.ShortInlineVar:
-                    case OperandType.InlineVar:
-                        EmitILForInlineVar(ilGenerator, instruction);
-                        break;
-                    case OperandType.InlineTok:
-                    case OperandType.InlineType:
-                    case OperandType.InlineField:
-                    case OperandType.InlineMethod:
-                        EmitILForInlineMember(ilGenerator, instruction);
-                        break;
-                    default:
-                        throw new NotSupportedException();
+                    state.Body.Add(
+                        Expression.Label(label)
+                    );
+                }
+
+                if (instruction.OpCode == OpCodes.Nop ||
+                    instruction.OpCode == OpCodes.Ldobj ||
+                    instruction.OpCode.Name.Contains("Ldind"))
+                {
+                    // Do nothing
+                }
+                else if (instruction.OpCode == OpCodes.Pop)
+                {
+                    state.Stack.Pop();
+                }
+                else if (instruction.OpCode == OpCodes.Ldnull)
+                {
+                    TransformLdNull(state);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4 ||
+                    instruction.OpCode == OpCodes.Ldc_I4_S)
+                {
+                    TransformLdC(state, Convert.ToInt32((sbyte)instruction.Operand));
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I8 ||
+                    instruction.OpCode == OpCodes.Ldc_R4 ||
+                    instruction.OpCode == OpCodes.Ldc_R8)
+                {
+                    TransformLdC(state, instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_0)
+                {
+                    TransformLdC(state, 0);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_1)
+                {
+                    TransformLdC(state, 1);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_2)
+                {
+                    TransformLdC(state, 2);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_3)
+                {
+                    TransformLdC(state, 3);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_4)
+                {
+                    TransformLdC(state, 4);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_5)
+                {
+                    TransformLdC(state, 5);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_6)
+                {
+                    TransformLdC(state, 6);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_7)
+                {
+                    TransformLdC(state, 7);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_8)
+                {
+                    TransformLdC(state, 8);
+                }
+                else if (instruction.OpCode == OpCodes.Ldc_I4_M1)
+                {
+                    TransformLdC(state, -1);
+                }
+                else if (instruction.OpCode == OpCodes.Ldstr)
+                {
+                    TransformLdStr(state, (string)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldarg ||
+                        instruction.OpCode == OpCodes.Ldarg_S ||
+                        instruction.OpCode == OpCodes.Ldarga ||
+                        instruction.OpCode == OpCodes.Ldarga_S)
+                {
+                    int index = ((ParameterInfo)instruction.Operand).Position;
+                    TransformLdArg(state, _method.IsStatic ? index : index + 1);
+                }
+                else if (instruction.OpCode == OpCodes.Ldarg_0)
+                {
+                    TransformLdArg(state, 0);
+                }
+                else if (instruction.OpCode == OpCodes.Ldarg_1)
+                {
+                    TransformLdArg(state, 1);
+                }
+                else if (instruction.OpCode == OpCodes.Ldarg_2)
+                {
+                    TransformLdArg(state, 2);
+                }
+                else if (instruction.OpCode == OpCodes.Ldarg_3)
+                {
+                    TransformLdArg(state, 3);
+                }
+                else if (instruction.OpCode == OpCodes.Ldloc ||
+                        instruction.OpCode == OpCodes.Ldloc_S ||
+                        instruction.OpCode == OpCodes.Ldloca ||
+                        instruction.OpCode == OpCodes.Ldloca_S)
+                {
+                    TransformLdLoc(state, ((LocalVariableInfo)instruction.Operand).LocalIndex);
+                }
+                else if (instruction.OpCode == OpCodes.Ldloc_0)
+                {
+                    TransformLdLoc(state, 0);
+                }
+                else if (instruction.OpCode == OpCodes.Ldloc_1)
+                {
+                    TransformLdLoc(state, 1);
+                }
+                else if (instruction.OpCode == OpCodes.Ldloc_2)
+                {
+                    TransformLdLoc(state, 2);
+                }
+                else if (instruction.OpCode == OpCodes.Ldloc_3)
+                {
+                    TransformLdLoc(state, 3);
+                }
+                else if (instruction.OpCode == OpCodes.Starg ||
+                        instruction.OpCode == OpCodes.Starg_S)
+                {
+                    int index = ((ParameterInfo)instruction.Operand).Position;
+                    TransformStArg(state, _method.IsStatic ? index : index + 1);
+                }
+                else if (instruction.OpCode == OpCodes.Stloc ||
+                        instruction.OpCode == OpCodes.Stloc_S)
+                {
+                    TransformStLoc(state, ((LocalVariableInfo)instruction.Operand).LocalIndex);
+                }
+                else if (instruction.OpCode == OpCodes.Stloc_0)
+                {
+                    TransformStLoc(state, 0);
+                }
+                else if (instruction.OpCode == OpCodes.Stloc_1)
+                {
+                    TransformStLoc(state, 1);
+                }
+                else if (instruction.OpCode == OpCodes.Stloc_2)
+                {
+                    TransformStLoc(state, 2);
+                }
+                else if (instruction.OpCode == OpCodes.Stloc_3)
+                {
+                    TransformStLoc(state, 3);
+                }
+                else if (instruction.OpCode == OpCodes.Add ||
+                        instruction.OpCode == OpCodes.Add_Ovf ||
+                        instruction.OpCode == OpCodes.Add_Ovf_Un)
+                {
+                    TransformAdd(state, instruction.OpCode.Name.Contains("Ovf"));
+                }
+                else if (instruction.OpCode == OpCodes.Sub ||
+                        instruction.OpCode == OpCodes.Sub_Ovf ||
+                        instruction.OpCode == OpCodes.Sub_Ovf_Un)
+                {
+                    TransformSub(state, instruction.OpCode.Name.Contains("Ovf"));
+                }
+                else if (instruction.OpCode == OpCodes.Mul ||
+                        instruction.OpCode == OpCodes.Mul_Ovf ||
+                        instruction.OpCode == OpCodes.Mul_Ovf_Un)
+                {
+                    TransformMul(state, instruction.OpCode.Name.Contains("Ovf"));
+                }
+                else if (instruction.OpCode == OpCodes.Div ||
+                        instruction.OpCode == OpCodes.Div_Un)
+                {
+                    TransformDiv(state);
+                }
+                else if (instruction.OpCode == OpCodes.Rem ||
+                        instruction.OpCode == OpCodes.Rem_Un)
+                {
+                    TransformRem(state);
+                }
+                else if (instruction.OpCode == OpCodes.Ceq)
+                {
+                    TransformCeq(state);
+                }
+                else if (instruction.OpCode == OpCodes.Neg)
+                {
+                    TransformNeg(state);
+                }
+                else if (instruction.OpCode == OpCodes.Cgt ||
+                        instruction.OpCode == OpCodes.Cgt_Un)
+                {
+                    TransformCgt(state);
+                }
+                else if (instruction.OpCode == OpCodes.Clt ||
+                        instruction.OpCode == OpCodes.Clt_Un)
+                {
+                    TransformClt(state);
+                }
+                else if (instruction.OpCode == OpCodes.Shl)
+                {
+                    TransformShl(state);
+                }
+                else if (instruction.OpCode == OpCodes.Shr ||
+                        instruction.OpCode == OpCodes.Shr_Un)
+                {
+                    TransformShr(state);
+                }
+                else if (instruction.OpCode == OpCodes.And)
+                {
+                    TransformAnd(state);
+                }
+                else if (instruction.OpCode == OpCodes.Or)
+                {
+                    TransformOr(state);
+                }
+                else if (instruction.OpCode == OpCodes.Xor)
+                {
+                    TransformXor(state);
+                }
+                else if (instruction.OpCode == OpCodes.Not)
+                {
+                    TransformNot(state);
+                }
+                else if (instruction.OpCode == OpCodes.Throw)
+                {
+                    TransformThrow(state);
+                }
+                else if (instruction.OpCode == OpCodes.Rethrow)
+                {
+                    TransformRethrow(state);
+                }
+                else if (instruction.OpCode == OpCodes.Castclass)
+                {
+                    TransformCastClass(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Dup)
+                {
+                    TransformDup(state);
+                }
+                else if (instruction.OpCode == OpCodes.Box)
+                {
+                    TransformBox(state);
+                }
+                else if (instruction.OpCode == OpCodes.Unbox ||
+                        instruction.OpCode == OpCodes.Unbox_Any)
+                {
+                    TransformUnbox(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Newarr)
+                {
+                    TransformNewarr(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldelem ||
+                        instruction.OpCode == OpCodes.Ldelem_I ||
+                        instruction.OpCode == OpCodes.Ldelem_I1 ||
+                        instruction.OpCode == OpCodes.Ldelem_I2 ||
+                        instruction.OpCode == OpCodes.Ldelem_I4 ||
+                        instruction.OpCode == OpCodes.Ldelem_I8 ||
+                        instruction.OpCode == OpCodes.Ldelem_U1 ||
+                        instruction.OpCode == OpCodes.Ldelem_U2 ||
+                        instruction.OpCode == OpCodes.Ldelem_U4 ||
+                        instruction.OpCode == OpCodes.Ldelem_R4 ||
+                        instruction.OpCode == OpCodes.Ldelem_R8 ||
+                        instruction.OpCode == OpCodes.Ldelem_Ref ||
+                        instruction.OpCode == OpCodes.Ldelema)
+
+                {
+                    TransformLdelem(state);
+                }
+                else if (instruction.OpCode == OpCodes.Stelem ||
+                        instruction.OpCode == OpCodes.Stelem_I ||
+                        instruction.OpCode == OpCodes.Stelem_I1 ||
+                        instruction.OpCode == OpCodes.Stelem_I2 ||
+                        instruction.OpCode == OpCodes.Stelem_I4 ||
+                        instruction.OpCode == OpCodes.Stelem_I8 ||
+                        instruction.OpCode == OpCodes.Stelem_R4 ||
+                        instruction.OpCode == OpCodes.Stelem_R8 ||
+                        instruction.OpCode == OpCodes.Stelem_Ref)
+
+                {
+                    TransformStelem(state);
+                }
+                else if (instruction.OpCode == OpCodes.Ldtoken)
+                {
+                    TransformLdtoken(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldlen)
+                {
+                    TransformLdlen(state);
+                }
+                else if (instruction.OpCode == OpCodes.Br ||
+                        instruction.OpCode == OpCodes.Br_S)
+
+                {
+                    TransformBr(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Beq ||
+                        instruction.OpCode == OpCodes.Beq_S)
+
+                {
+                    TransformBeq(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Bne_Un ||
+                        instruction.OpCode == OpCodes.Bne_Un_S)
+
+                {
+                    TransformBne(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Bge ||
+                        instruction.OpCode == OpCodes.Bge_S ||
+                        instruction.OpCode == OpCodes.Bge_Un ||
+                        instruction.OpCode == OpCodes.Bge_Un_S)
+
+                {
+                    TransformBge(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Bgt ||
+                        instruction.OpCode == OpCodes.Bgt_S ||
+                        instruction.OpCode == OpCodes.Bgt_Un ||
+                        instruction.OpCode == OpCodes.Bgt_Un_S)
+
+                {
+                    TransformBgt(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Ble ||
+                        instruction.OpCode == OpCodes.Ble_S ||
+                        instruction.OpCode == OpCodes.Ble_Un ||
+                        instruction.OpCode == OpCodes.Ble_Un_S)
+
+                {
+                    TransformBle(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Blt ||
+                        instruction.OpCode == OpCodes.Blt_S ||
+                        instruction.OpCode == OpCodes.Blt_Un ||
+                        instruction.OpCode == OpCodes.Blt_Un_S)
+
+                {
+                    TransformBlt(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Newobj)
+                {
+                    TransformNewobj(state, (ConstructorInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Initobj)
+                {
+                    TransformInitobj(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Isinst)
+                {
+                    TransformIsInst(state, (Type)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldfld ||
+                        instruction.OpCode == OpCodes.Ldflda)
+                {
+                    TransformLdfld(state, (FieldInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldsfld ||
+                        instruction.OpCode == OpCodes.Ldsflda)
+                {
+                    TransformLdsfld(state, (FieldInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Stfld)
+                {
+                    TransformStfld(state, (FieldInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Stsfld)
+                {
+                    TransformStsfld(state, (FieldInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Call ||
+                        instruction.OpCode == OpCodes.Callvirt)
+                {
+                    TransformCall(state, (MethodInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ret)
+                {
+                    TransformRet(state);
+                }
+                else
+                {
+                    throw new NotImplementedException(instruction.OpCode.Name);
                 }
             }
 
-            return dynamicMethod;
+            var body = Expression.Block(
+                state.Variables,
+                state.Body
+            );
+
+            return Expression.Lambda(body, state.Arguments).Compile();
         }
 
-        private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode);
-
-        private void EmitILForInlineI(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (int)instruction.Operand);
-
-        private void EmitILForInlineI8(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (long)instruction.Operand);
-
-        private void EmitILForShortInlineI(ILGenerator ilGenerator, Instruction instruction)
+        private void TransformLdNull(State state)
         {
-            if (instruction.OpCode == OpCodes.Ldc_I4_S)
-                ilGenerator.Emit(instruction.OpCode, (sbyte)instruction.Operand);
-            else
-                ilGenerator.Emit(instruction.OpCode, (byte)instruction.Operand);
+            state.Stack.Push(Expression.Constant(null));
         }
 
-        private void EmitILForInlineR(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (double)instruction.Operand);
-
-        private void EmitILForShortInlineR(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (float)instruction.Operand);
-
-        private void EmitILForInlineString(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode, (string)instruction.Operand);
-
-        private void EmitILForInlineBrTarget(ILGenerator ilGenerator,
-            Instruction instruction, Dictionary<int, Label> targetInstructions)
+        private void TransformLdC(State state, object v)
         {
-            Label targetLabel = targetInstructions[(instruction.Operand as Instruction).Offset];
-            // Offset values could change and not be short form anymore
-            if (instruction.OpCode == OpCodes.Br_S)
-                ilGenerator.Emit(OpCodes.Br, targetLabel);
-            else if (instruction.OpCode == OpCodes.Brfalse_S)
-                ilGenerator.Emit(OpCodes.Brfalse, targetLabel);
-            else if (instruction.OpCode == OpCodes.Brtrue_S)
-                ilGenerator.Emit(OpCodes.Brtrue, targetLabel);
-            else if (instruction.OpCode == OpCodes.Beq_S)
-                ilGenerator.Emit(OpCodes.Beq, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bge_S)
-                ilGenerator.Emit(OpCodes.Bge, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bgt_S)
-                ilGenerator.Emit(OpCodes.Bgt, targetLabel);
-            else if (instruction.OpCode == OpCodes.Ble_S)
-                ilGenerator.Emit(OpCodes.Ble, targetLabel);
-            else if (instruction.OpCode == OpCodes.Blt_S)
-                ilGenerator.Emit(OpCodes.Blt, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bne_Un_S)
-                ilGenerator.Emit(OpCodes.Bne_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bge_Un_S)
-                ilGenerator.Emit(OpCodes.Bge_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bgt_Un_S)
-                ilGenerator.Emit(OpCodes.Bgt_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Ble_Un_S)
-                ilGenerator.Emit(OpCodes.Ble_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Blt_Un_S)
-                ilGenerator.Emit(OpCodes.Blt_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Leave_S)
-                ilGenerator.Emit(OpCodes.Leave, targetLabel);
-            else
-                ilGenerator.Emit(instruction.OpCode, targetLabel);
+            state.Stack.Push(Expression.Constant(v, v.GetType()));
         }
 
-        private void EmitILForInlineSwitch(ILGenerator ilGenerator,
-            Instruction instruction, Dictionary<int, Label> targetInstructions)
+        private void TransformLdStr(State state, string str)
         {
-            Instruction[] switchInstructions = (Instruction[])instruction.Operand;
-            Label[] targetLabels = new Label[switchInstructions.Length];
-            for (int i = 0; i < switchInstructions.Length; i++)
-                targetLabels[i] = targetInstructions[switchInstructions[i].Offset];
-            ilGenerator.Emit(instruction.OpCode, targetLabels);
+            state.Stack.Push(Expression.Constant(str, typeof(string)));
         }
 
-        private void EmitILForInlineVar(ILGenerator ilGenerator, Instruction instruction)
+        private void TransformLdArg(State state, int index)
         {
-            int index = 0;
-            if (instruction.OpCode.Name.Contains("loc"))
-                index = ((LocalVariableInfo)instruction.Operand).LocalIndex;
-            else
-            {
-                index = ((ParameterInfo)instruction.Operand).Position;
-                index = _method.IsStatic ? index : index + 1;
-            }
-
-            if (instruction.OpCode.OperandType == OperandType.ShortInlineVar)
-                ilGenerator.Emit(instruction.OpCode, (byte)index);
-            else
-                ilGenerator.Emit(instruction.OpCode, (short)index);
+            state.Stack.Push(state.Arguments[index]);
         }
 
-        private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
+        private void TransformStArg(State state, int index)
         {
-            ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
-            if (PoseContext.StubCache.TryGetValue(constructorInfo, out DynamicMethod stub))
-            {
-                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                return;
-            }
-
-            MethodBody methodBody = constructorInfo.GetMethodBody();
-            if (methodBody == null)
-            {
-                ilGenerator.Emit(instruction.OpCode, constructorInfo);
-                return;
-            }
-
-            if (instruction.OpCode != OpCodes.Newobj && instruction.OpCode != OpCodes.Call)
-            {
-                ilGenerator.Emit(instruction.OpCode, constructorInfo);
-                return;
-            }
-
-            stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType());
-            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-            ilGenerator.Emit(OpCodes.Call, stub);
-            PoseContext.StubCache.TryAdd(constructorInfo, stub);
+            state.Stack.Push(
+                Expression.Assign(
+                    state.Arguments[index],
+                    state.Stack.Pop()
+                )
+            );
         }
 
-        private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
+        private void TransformLdLoc(State state, int index)
         {
-            MethodInfo methodInfo = memberInfo as MethodInfo;
-            if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
-            {
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                return;
-            }
+            state.Stack.Push(state.Variables[index]);
+        }
 
-            MethodBody methodBody = methodInfo.GetMethodBody();
-            if (methodBody == null && !methodInfo.IsAbstract)
-            {
-                ilGenerator.Emit(instruction.OpCode, methodInfo);
-                return;
-            }
+        private void TransformStLoc(State state, int index)
+        {
+            state.Body.Add(
+                Expression.Assign(
+                    state.Variables[index],
+                    state.Stack.Pop()
+                )
+            );
+        }
 
-            if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
+        private void TransformAdd(State state, bool @checked)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            if (@checked)
             {
-                stub = instruction.OpCode == OpCodes.Call ?
-                    Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                PoseContext.StubCache.TryAdd(methodInfo, stub);
-            }
-            else if (instruction.OpCode == OpCodes.Ldftn)
-            {
-                stub = Stubs.GenerateStubForMethodPointer(methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                PoseContext.StubCache.TryAdd(methodInfo, stub);
+                state.Stack.Push(
+                    Expression.AddChecked(
+                        left, right
+                    )
+                );
             }
             else
             {
-                ilGenerator.Emit(instruction.OpCode, methodInfo);
+                state.Stack.Push(
+                    Expression.Add(
+                        left, right
+                    )
+                );
             }
         }
 
-        private void EmitILForInlineMember(ILGenerator ilGenerator, Instruction instruction)
+        private void TransformSub(State state, bool @checked)
         {
-            MemberInfo memberInfo = (MemberInfo)instruction.Operand;
-            if (memberInfo.MemberType == MemberTypes.Field)
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            if (@checked)
             {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as FieldInfo);
-            }
-            else if (memberInfo.MemberType == MemberTypes.TypeInfo
-                || memberInfo.MemberType == MemberTypes.NestedType)
-            {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as TypeInfo);
-            }
-            else if (memberInfo.MemberType == MemberTypes.Constructor)
-            {
-                EmitILForConstructor(ilGenerator, instruction, memberInfo);
-            }
-            else if (memberInfo.MemberType == MemberTypes.Method)
-            {
-                EmitILForMethod(ilGenerator, instruction, memberInfo);
+                state.Stack.Push(
+                    Expression.SubtractChecked(
+                        left, right
+                    )
+                );
             }
             else
             {
-                throw new NotSupportedException();
+                state.Stack.Push(
+                    Expression.Add(
+                        left, right
+                    )
+                );
+            }
+        }
+
+        private void TransformMul(State state, bool @checked)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            if (@checked)
+            {
+                state.Stack.Push(
+                    Expression.MultiplyChecked(
+                        left, right
+                    )
+                );
+            }
+            else
+            {
+                state.Stack.Push(
+                    Expression.Multiply(
+                        left, right
+                    )
+                );
+            }
+        }
+
+        private void TransformDiv(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Divide(
+                    left, right
+                )
+            );
+        }
+
+        private void TransformRem(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Modulo(
+                    left, right
+                )
+            );
+        }
+
+        private void TransformNeg(State state)
+        {
+            state.Stack.Push(
+                Expression.Negate(
+                    state.Stack.Pop()
+                )
+            );
+        }
+
+        private void TransformCeq(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Call(
+                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
+                    Expression.Equal(left, right)
+                )
+            );
+        }
+
+        private void TransformCgt(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Call(
+                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
+                    Expression.GreaterThan(left, right)
+                )
+            );
+        }
+
+        private void TransformClt(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Call(
+                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
+                    Expression.LessThan(left, right)
+                )
+            );
+        }
+
+        private void TransformShl(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.LeftShift(left, right)
+            );
+        }
+
+        private void TransformShr(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.RightShift(left, right)
+            );
+        }
+
+        private void TransformAnd(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.And(
+                    left, right
+                )
+            );
+        }
+
+        private void TransformOr(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.Or(
+                    left, right
+                )
+            );
+        }
+
+        private void TransformXor(State state)
+        {
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Stack.Push(
+                Expression.ExclusiveOr(
+                    left, right
+                )
+            );
+        }
+
+        private void TransformNot(State state)
+        {
+            state.Stack.Push(
+                Expression.Not(state.Stack.Pop())
+            );
+        }
+
+        private void TransformThrow(State state)
+        {
+            state.Body.Add(
+                Expression.Throw(state.Stack.Pop())
+            );
+        }
+
+        private void TransformRethrow(State state)
+        {
+            state.Body.Add(
+                Expression.Rethrow()
+            );
+        }
+
+        private void TransformCastClass(State state, Type type)
+        {
+            state.Stack.Push(
+                Expression.Convert(
+                    state.Stack.Pop(),
+                    type
+                )
+            );
+        }
+
+        private void TransformDup(State state)
+        {
+            state.Stack.Push(
+                state.Stack.Peek()
+            );
+        }
+
+        private void TransformBox(State state)
+        {
+            state.Stack.Push(
+                Expression.Convert(
+                    state.Stack.Pop(),
+                    typeof(object)
+                )
+            );
+        }
+
+        private void TransformUnbox(State state, Type type)
+        {
+            state.Stack.Push(
+                Expression.Unbox(
+                    state.Stack.Pop(),
+                    type
+                )
+            );
+        }
+
+        private void TransformNewarr(State state, Type type)
+        {
+            state.Stack.Push(
+                Expression.NewArrayBounds(
+                    type,
+                    state.Stack.Pop()
+                )
+            );
+        }
+
+        private void TransformLdelem(State state)
+        {
+            var index = state.Stack.Pop();
+            var array = state.Stack.Pop();
+            state.Stack.Push(
+                Expression.ArrayIndex(
+                    array,
+                    index
+                )
+            );
+        }
+
+        private void TransformStelem(State state)
+        {
+            var value = state.Stack.Pop();
+            var index = state.Stack.Pop();
+            var array = state.Stack.Pop();
+
+            state.Body.Add(
+                Expression.Assign(
+                    Expression.ArrayAccess(
+                        array,
+                        new[] { index }
+                    ),
+                    value
+                )
+            );
+        }
+
+        private void TransformLdtoken(State state, MemberInfo memberInfo)
+        {
+            if (memberInfo is FieldInfo fieldInfo)
+            {
+                state.Stack.Push(
+                    Expression.Constant(fieldInfo.FieldHandle)
+                );
+            }
+            else if (memberInfo is Type type)
+            {
+                state.Stack.Push(
+                    Expression.Constant(type.TypeHandle)
+                );
+            }
+            else if (memberInfo is MethodBase methodBase)
+            {
+                state.Stack.Push(
+                    Expression.Constant(methodBase.MethodHandle)
+                );
+            }
+        }
+
+        private void TransformLdlen(State state)
+        {
+            state.Stack.Push(
+                Expression.ArrayLength(
+                    state.Stack.Pop()
+                )
+            );
+        }
+
+        private void TransformBr(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            state.Body.Add(
+                Expression.Goto(labelTarget)
+            );
+        }
+
+        private void TransformBeq(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.Equal(state.Stack.Pop(), state.Stack.Pop()),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBne(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.NotEqual(state.Stack.Pop(), state.Stack.Pop()),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBge(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.GreaterThanOrEqual(left, right),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBgt(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.GreaterThan(left, right),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBle(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.LessThanOrEqual(left, right),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBlt(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            var right = state.Stack.Pop();
+            var left = state.Stack.Pop();
+
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.LessThan(left, right),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformNewobj(State state, ConstructorInfo constructorInfo)
+        {
+            List<Expression> args = new List<Expression>();
+            for (int i = 0; i < constructorInfo.GetParameters().Length; i++)
+            {
+                args.Add(
+                    state.Stack.Pop()
+                );
+            }
+
+            args.Reverse();
+
+            state.Stack.Push(
+                Expression.New(
+                    constructorInfo,
+                    args
+                )
+            );
+        }
+
+        private void TransformInitobj(State state, Type type)
+        {
+            state.Stack.Pop();
+        }
+
+        private void TransformIsInst(State state, Type type)
+        {
+            state.Stack.Push(
+                Expression.TypeAs(
+                    state.Stack.Pop(),
+                    type
+                )
+            );
+        }
+
+        private void TransformLdfld(State state, FieldInfo fieldInfo)
+        {
+            state.Stack.Push(
+                Expression.MakeMemberAccess(state.Stack.Pop(), fieldInfo)
+            );
+        }
+
+        private void TransformLdsfld(State state, FieldInfo fieldInfo)
+        {
+            state.Stack.Push(
+                Expression.MakeMemberAccess(null, fieldInfo)
+            );
+        }
+
+        private void TransformStfld(State state, FieldInfo fieldInfo)
+        {
+            var val = state.Stack.Pop();
+            var obj = state.Stack.Pop();
+            state.Body.Add(
+                Expression.Assign(
+                    Expression.MakeMemberAccess(obj, fieldInfo),
+                    val
+                )
+            );
+        }
+
+        private void TransformStsfld(State state, FieldInfo fieldInfo)
+        {
+            state.Body.Add(
+                Expression.Assign(
+                    Expression.MakeMemberAccess(null, fieldInfo),
+                    state.Stack.Pop()
+                )
+            );
+        }
+
+        private void TransformCall(State state, MethodInfo methodInfo)
+        {
+            List<Expression> args = new List<Expression>();
+            for (int i = 0; i < methodInfo.GetParameters().Length; i++)
+            {
+                args.Add(
+                    state.Stack.Pop()
+                );
+            }
+
+            args.Reverse();
+            Expression instance = (methodInfo.IsStatic) ? null : state.Stack.Pop();
+
+            if (methodInfo.ReturnType == typeof(void))
+            {
+                state.Body.Add(
+                    Expression.Call(
+                        instance, methodInfo, args
+                    )
+                );
+            }
+            else
+            {
+                state.Stack.Push(
+                    Expression.Call(
+                        instance, methodInfo, args
+                    )
+                );
+            }
+        }
+
+        private void TransformRet(State state)
+        {
+            if (state.Stack.Count() > 0)
+            {
+                state.Body.Add(
+                    state.Stack.Pop()
+                );
             }
         }
     }
