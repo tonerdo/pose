@@ -277,6 +277,63 @@ namespace Pose.IL
                 {
                     TransformDup(state);
                 }
+                else if (instruction.OpCode == OpCodes.Conv_I ||
+                        instruction.OpCode == OpCodes.Conv_U)
+                {
+                    TransformConv(state, typeof(IntPtr), false);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_I1 ||
+                        instruction.OpCode == OpCodes.Conv_I2 ||
+                        instruction.OpCode == OpCodes.Conv_I4 ||
+                        instruction.OpCode == OpCodes.Conv_U1 ||
+                        instruction.OpCode == OpCodes.Conv_U2 ||
+                        instruction.OpCode == OpCodes.Conv_U4)
+                {
+                    TransformConv(state, typeof(int), false);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_I8 ||
+                        instruction.OpCode == OpCodes.Conv_U8)
+                {
+                    TransformConv(state, typeof(long), false);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_R4 ||
+                        instruction.OpCode == OpCodes.Conv_R_Un)
+                {
+                    TransformConv(state, typeof(float), false);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_R8)
+                {
+                    TransformConv(state, typeof(double), false);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_Ovf_I ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U_Un)
+                {
+                    TransformConv(state, typeof(IntPtr), true);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_Ovf_I1 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I1_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I2 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I2_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I4 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I4_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U1 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U1_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U2 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U2_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U4 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U4_Un)
+                {
+                    TransformConv(state, typeof(int), true);
+                }
+                else if (instruction.OpCode == OpCodes.Conv_Ovf_I8 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_I8_Un ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U8 ||
+                        instruction.OpCode == OpCodes.Conv_Ovf_U8_Un)
+                {
+                    TransformConv(state, typeof(long), true);
+                }
                 else if (instruction.OpCode == OpCodes.Box)
                 {
                     TransformBox(state);
@@ -333,6 +390,16 @@ namespace Pose.IL
 
                 {
                     TransformBr(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Brtrue ||
+                        instruction.OpCode == OpCodes.Brtrue_S)
+                {
+                    TransformBrTrue(state, (Instruction)instruction.Operand, targets);
+                }
+                else if (instruction.OpCode == OpCodes.Brfalse ||
+                        instruction.OpCode == OpCodes.Brfalse_S)
+                {
+                    TransformBrFalse(state, (Instruction)instruction.Operand, targets);
                 }
                 else if (instruction.OpCode == OpCodes.Beq ||
                         instruction.OpCode == OpCodes.Beq_S)
@@ -584,10 +651,7 @@ namespace Pose.IL
             var left = state.Stack.Pop();
 
             state.Stack.Push(
-                Expression.Call(
-                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
-                    Expression.Equal(left, right)
-                )
+                Expression.Equal(left, right)
             );
         }
 
@@ -597,10 +661,7 @@ namespace Pose.IL
             var left = state.Stack.Pop();
 
             state.Stack.Push(
-                Expression.Call(
-                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
-                    Expression.GreaterThan(left, right)
-                )
+                Expression.GreaterThan(left, right)
             );
         }
 
@@ -610,10 +671,7 @@ namespace Pose.IL
             var left = state.Stack.Pop();
 
             state.Stack.Push(
-                Expression.Call(
-                    typeof(Convert).GetMethod("ToInt32", new[] { typeof(bool) }),
-                    Expression.LessThan(left, right)
-                )
+                Expression.LessThan(left, right)
             );
         }
 
@@ -711,6 +769,28 @@ namespace Pose.IL
             );
         }
 
+        private void TransformConv(State state, Type type, bool @checked)
+        {
+            if (@checked)
+            {
+                state.Stack.Push(
+                    Expression.ConvertChecked(
+                        state.Stack.Pop(),
+                        type
+                    )
+                );
+            }
+            else
+            {
+                state.Stack.Push(
+                    Expression.Convert(
+                        state.Stack.Pop(),
+                        type
+                    )
+                );   
+            }
+        }
+
         private void TransformBox(State state)
         {
             state.Stack.Push(
@@ -806,6 +886,28 @@ namespace Pose.IL
             LabelTarget labelTarget = targets[instruction.Offset];
             state.Body.Add(
                 Expression.Goto(labelTarget)
+            );
+        }
+
+        private void TransformBrTrue(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.IsTrue(state.Stack.Pop()),
+                    Expression.Goto(labelTarget)
+                )
+            );
+        }
+
+        private void TransformBrFalse(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
+        {
+            LabelTarget labelTarget = targets[instruction.Offset];
+            state.Body.Add(
+                Expression.IfThen(
+                    Expression.IsFalse(state.Stack.Pop()),
+                    Expression.Goto(labelTarget)
+                )
             );
         }
 
