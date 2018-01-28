@@ -83,6 +83,18 @@ using Pose;
 Shim ctorShim = Shim.Replace(() => new MyClass()).With(() => new MyClass() { MyProperty = 10 });
 ```
 
+```csharp
+using Pose;
+
+Shim ctorShim = Shim.Replace<MyClassBase>(() => new MyClassAInheritingFromBase()).With(() => new MyClassBInheritingFromBase());
+```
+
+```csharp
+using Pose;
+
+Shim ctorShim = Shim.Replace(() => new MyClassAInheritingFromBase()).With(() => new MyClassBInheritingFromBase(42));
+```
+
 ### Shim instance method of a Reference Type
 
 ```csharp
