@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -13,6 +12,9 @@ namespace Pose.Helpers
     {
         public static MethodBase GetMethodFromExpression(Expression expression, bool setter, out Object instanceOrType)
         {
+            if (expression == null)
+                throw new ArgumentNullException(nameof(expression));
+
             switch (expression.NodeType)
             {
                 case ExpressionType.MemberAccess:
@@ -25,8 +27,8 @@ namespace Pose.Helpers
                             instanceOrType = GetObjectInstanceOrType(memberExpression.Expression);
                             return setter ? propertyInfo.GetSetMethod() : propertyInfo.GetGetMethod();
                         }
-                        else
-                            throw new NotImplementedException("Unsupported expression");
+
+                        throw new NotImplementedException("Unsupported expression");
                     }
                 case ExpressionType.Call:
                     MethodCallExpression methodCallExpression = expression as MethodCallExpression;
@@ -41,8 +43,14 @@ namespace Pose.Helpers
             }
         }
 
-        public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type, bool setter)
+        public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type,
+            bool setter, Type baseType)
         {
+            if (original == null)
+                throw new ArgumentNullException(nameof(original));
+            if (replacement == null)
+                throw new ArgumentNullException(nameof(replacement));
+
             bool isValueType = original.IsForValueType();
             bool isStatic = original.IsStatic;
             bool isConstructor = original.IsConstructor;
@@ -56,13 +64,22 @@ namespace Pose.Helpers
             Type shimOwningType = isStaticOrConstructor
                 ? validOwningType : replacement.GetParameters().Select(p => p.ParameterType).FirstOrDefault();
 
-            var validParameterTypes = original.GetParameters().Select(p => p.ParameterType);
+            var validParameterTypes = original.GetParameters().Select(p => p.ParameterType).ToList();
             var shimParameterTypes = replacement.GetParameters()
                                         .Select(p => p.ParameterType)
-                                        .Skip(isStaticOrConstructor ? 0 : 1);
+                                        .Skip(isStaticOrConstructor ? 0 : 1).ToList();
 
-            if (vaildReturnType != shimReturnType)
+            if (!isConstructor && vaildReturnType != shimReturnType)
                 throw new InvalidShimSignatureException("Mismatched return types");
+
+            if (isConstructor)
+            {
+                var isValidReturnType = CheckTypesForAssignability(baseType, shimReturnType);
+                if (!isValidReturnType)
+                {
+                    throw new InvalidShimSignatureException("Mismatched construction types");
+                }
+            }
 
             if (!isStaticOrConstructor)
             {
@@ -73,10 +90,10 @@ namespace Pose.Helpers
             if ((isValueType && !isStaticOrConstructor ? validOwningType.MakeByRefType() : validOwningType) != shimOwningType)
                 throw new InvalidShimSignatureException("Mismatched instance types");
 
-            if (validParameterTypes.Count() != shimParameterTypes.Count())
+            if (validParameterTypes.Count != shimParameterTypes.Count)
                 throw new InvalidShimSignatureException("Parameters count do not match");
 
-            for (int i = 0; i < validParameterTypes.Count(); i++)
+            for (int i = 0; i < validParameterTypes.Count; i++)
             {
                 if (validParameterTypes.ElementAt(i) != shimParameterTypes.ElementAt(i))
                     throw new InvalidShimSignatureException($"Parameter types at {i} do not match");
@@ -125,6 +142,33 @@ namespace Pose.Helpers
         {
             if (instance.GetType().IsSubclassOf(typeof(ValueType)))
                 throw new NotSupportedException("You cannot replace methods on specific value type instances");
+        }
+
+        private static bool CheckTypesForAssignability(Type baseType, Type typeToCheck)
+        {
+            var stype = typeToCheck;
+            while (stype != typeof(object))
+            {
+                if (baseType.IsAssignableFrom(stype))
+                {
+                    return true;
+                }
+
+                stype = stype.BaseType;
+            }
+
+            stype = baseType.BaseType;
+            while (stype != typeof(object))
+            {
+                if (stype.IsAssignableFrom(typeToCheck))
+                {
+                    return true;
+                }
+
+                stype = stype.BaseType;
+            }
+
+            return false;
         }
     }
 }
