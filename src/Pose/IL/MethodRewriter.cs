@@ -38,7 +38,7 @@ namespace Pose.IL
 
             foreach (var instruction in instructions)
             {
-                Debug.WriteLine(instruction);
+                Console.WriteLine(instruction);
 
                 if (targets.TryGetValue(instruction.Offset, out LabelTarget label))
                 {
@@ -769,16 +769,24 @@ namespace Pose.IL
 
         private void TransformDup(State state)
         {
-            var value = state.Stack.Pop();
-            var variable = Expression.Variable(value.Type);
-            state.Variables.Add(variable);
+            var value = state.Stack.Peek();
+            if (value.NodeType == ExpressionType.NewArrayBounds ||
+                value.NodeType == ExpressionType.NewArrayInit)
+            {
+                value = state.Stack.Pop();
+                var variable = Expression.Variable(value.Type);
+                state.Variables.Add(variable);
 
-            state.Body.Add(
-                Expression.Assign(variable, value)
-            );
+                state.Body.Add(
+                    Expression.Assign(variable, value)
+                );
 
-            state.Stack.Push(variable);
-            state.Stack.Push(variable);
+                state.Stack.Push(variable);
+                state.Stack.Push(variable);
+                return;
+            }
+
+            state.Stack.Push(value);
         }
 
         private void TransformConv(State state, Type type, bool @checked)
@@ -799,7 +807,7 @@ namespace Pose.IL
                         state.Stack.Pop(),
                         type
                     )
-                );   
+                );
             }
         }
 
