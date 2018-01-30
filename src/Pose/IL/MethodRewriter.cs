@@ -478,7 +478,12 @@ namespace Pose.IL
                 else if (instruction.OpCode == OpCodes.Call ||
                         instruction.OpCode == OpCodes.Callvirt)
                 {
-                    TransformCall(state, (MethodInfo)instruction.Operand);
+                    TransformCall(state, (MemberInfo)instruction.Operand);
+                }
+                else if (instruction.OpCode == OpCodes.Ldftn ||
+                        instruction.OpCode == OpCodes.Ldvirtftn)
+                {
+                    TransformLdftn(state, (MethodInfo)instruction.Operand);
                 }
                 else if (instruction.OpCode == OpCodes.Ret)
                 {
@@ -764,9 +769,16 @@ namespace Pose.IL
 
         private void TransformDup(State state)
         {
-            state.Stack.Push(
-                state.Stack.Peek()
+            var value = state.Stack.Pop();
+            var variable = Expression.Variable(value.Type);
+            state.Variables.Add(variable);
+
+            state.Body.Add(
+                Expression.Assign(variable, value)
             );
+
+            state.Stack.Push(variable);
+            state.Stack.Push(variable);
         }
 
         private void TransformConv(State state, Type type, bool @checked)
@@ -892,9 +904,26 @@ namespace Pose.IL
         private void TransformBrTrue(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
         {
             LabelTarget labelTarget = targets[instruction.Offset];
+            var value = state.Stack.Pop();
+
+            if (value.Type == typeof(bool))
+            {
+                state.Body.Add(
+                    Expression.IfThen(
+                        Expression.IsTrue(value),
+                        Expression.Goto(labelTarget)
+                    )
+                );
+
+                return;
+            }
+
             state.Body.Add(
                 Expression.IfThen(
-                    Expression.IsTrue(state.Stack.Pop()),
+                    Expression.NotEqual(
+                        value,
+                        Expression.Constant(null)
+                    ),
                     Expression.Goto(labelTarget)
                 )
             );
@@ -903,9 +932,26 @@ namespace Pose.IL
         private void TransformBrFalse(State state, Instruction instruction, Dictionary<int, LabelTarget> targets)
         {
             LabelTarget labelTarget = targets[instruction.Offset];
+            var value = state.Stack.Pop();
+
+            if (value.Type == typeof(bool))
+            {
+                state.Body.Add(
+                    Expression.IfThen(
+                        Expression.IsFalse(value),
+                        Expression.Goto(labelTarget)
+                    )
+                );
+
+                return;
+            }
+
             state.Body.Add(
                 Expression.IfThen(
-                    Expression.IsFalse(state.Stack.Pop()),
+                    Expression.Equal(
+                        value,
+                        Expression.Constant(null)
+                    ),
                     Expression.Goto(labelTarget)
                 )
             );
@@ -1060,9 +1106,27 @@ namespace Pose.IL
             );
         }
 
-        private void TransformCall(State state, MethodInfo methodInfo)
+        private void TransformCall(State state, MemberInfo memberInfo)
         {
             List<Expression> args = new List<Expression>();
+            if (memberInfo is ConstructorInfo constructorInfo)
+            {
+                for (int i = 0; i < constructorInfo.GetParameters().Length; i++)
+                {
+                    args.Add(
+                        state.Stack.Pop()
+                    );
+                }
+
+                args.Reverse();
+                state.Body.Add(
+                    Expression.New(constructorInfo, args)
+                );
+
+                return;
+            }
+
+            MethodInfo methodInfo = memberInfo as MethodInfo;
             for (int i = 0; i < methodInfo.GetParameters().Length; i++)
             {
                 args.Add(
@@ -1089,6 +1153,13 @@ namespace Pose.IL
                     )
                 );
             }
+        }
+
+        private void TransformLdftn(State state, MethodInfo methodInfo)
+        {
+            state.Stack.Push(
+                Expression.Constant(methodInfo.MethodHandle.GetFunctionPointer())
+            );
         }
 
         private void TransformRet(State state)

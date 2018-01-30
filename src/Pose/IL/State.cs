@@ -13,7 +13,7 @@ namespace Pose.IL
         public Stack<Expression> Stack { get; private set; }
         public List<Expression> Body { get; private set; }
         public ParameterExpression[] Arguments { get; private set; }
-        public ParameterExpression[] Variables { get; private set; }
+        public List<ParameterExpression> Variables { get; private set; }
 
         public State(MethodBase method)
         {
@@ -31,7 +31,7 @@ namespace Pose.IL
 
             parameterTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
             Arguments = parameterTypes.Select(p => Expression.Parameter(p)).ToArray();
-            Variables = method.GetMethodBody().LocalVariables.Select(v => Expression.Variable(v.LocalType)).ToArray();
+            Variables = method.GetMethodBody().LocalVariables.Select(v => Expression.Variable(v.LocalType)).ToList();
         }
     }
 }
