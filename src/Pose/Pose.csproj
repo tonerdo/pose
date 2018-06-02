@@ -14,7 +14,7 @@
     <RepositoryUrl>https://github.com/tonerdo/pose</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Mono.Reflection" Version="1.1.0.0" />
+    <PackageReference Include="Mono.Reflection.Core" Version="1.1.1" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
 </Project>
