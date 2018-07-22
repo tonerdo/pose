@@ -181,7 +181,7 @@ namespace Pose.IL
             {
                 if (handler.Flag == "Clause")
                 {
-                    var _handlers = handlers.Where(h => h.TryStart == handler.TryStart && h.Flag == "Clause");
+                    var _handlers = handlers.Where(h => h.TryEnd == handler.TryEnd && h.Flag == "Clause");
                     if (handler.HandlerEnd == _handlers.Select(h => h.HandlerEnd).Max())
                         ilGenerator.EndExceptionBlock();
 
