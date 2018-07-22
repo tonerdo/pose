@@ -13,8 +13,16 @@ namespace Pose.IL
     internal class MethodRewriter
     {
         private MethodBase _method;
+        private static List<OpCode> s_IgnoredOpCodes;
 
-        private MethodRewriter() { }
+        private MethodRewriter()
+        {
+            s_IgnoredOpCodes = new List<OpCode>
+            {
+                OpCodes.Leave,
+                OpCodes.Leave_S
+            };
+        }
 
         public static MethodRewriter CreateRewriter(MethodBase method)
         {
@@ -43,17 +51,33 @@ namespace Pose.IL
                 true);
 
             MethodDisassembler disassembler = new MethodDisassembler(_method);
-            IList<LocalVariableInfo> locals = _method.GetMethodBody().LocalVariables;
-            ILGenerator ilGenerator = dynamicMethod.GetILGenerator();
+            MethodBody methodBody = _method.GetMethodBody();
 
-            var instructions = disassembler.GetILInstructions();
+            IList<LocalVariableInfo> locals = methodBody.LocalVariables;
             Dictionary<int, Label> targetInstructions = new Dictionary<int, Label>();
+            List<ExceptionHandler> handlers = new List<ExceptionHandler>();
+
+            ILGenerator ilGenerator = dynamicMethod.GetILGenerator();
+            var instructions = disassembler.GetILInstructions();
+
+            foreach (var clause in methodBody.ExceptionHandlingClauses)
+            {
+                ExceptionHandler handler = new ExceptionHandler();
+                handler.Flag = clause.Flags.ToString();
+                handler.CatchType = handler.Flag == "Clause" ? clause.CatchType : null;
+                handler.TryStart = clause.TryOffset;
+                handler.TryEnd = (clause.TryOffset + clause.TryLength);
+                handler.HandlerStart = clause.HandlerOffset;
+                handler.HandlerEnd = (clause.HandlerOffset + clause.HandlerLength);
+                handlers.Add(handler);
+            }
 
             foreach (var local in locals)
                 ilGenerator.DeclareLocal(local.LocalType, local.IsPinned);
 
             var ifTargets = instructions
                 .Where(i => (i.Operand as Instruction) != null)
+                .Where(i => !s_IgnoredOpCodes.Contains(i.OpCode))
                 .Select(i => (i.Operand as Instruction));
 
             foreach (Instruction instruction in ifTargets)
@@ -71,6 +95,11 @@ namespace Pose.IL
 
             foreach (var instruction in instructions)
             {
+                EmitILForExceptionHandlers(ilGenerator, instruction, handlers);
+
+                if (s_IgnoredOpCodes.Contains(instruction.OpCode))
+                    continue;
+
                 if (targetInstructions.TryGetValue(instruction.Offset, out Label label))
                     ilGenerator.MarkLabel(label);
 
@@ -120,6 +149,47 @@ namespace Pose.IL
             }
 
             return dynamicMethod;
+        }
+
+        private void EmitILForExceptionHandlers(ILGenerator ilGenerator, Instruction instruction, List<ExceptionHandler> handlers)
+        {
+            int catchBlockCount = 0;
+            foreach (var handler in handlers.Where(h => h.TryStart == instruction.Offset))
+            {
+                if (handler.Flag == "Clause")
+                {
+                    if (catchBlockCount >= 1)
+                        continue;
+
+                    ilGenerator.BeginExceptionBlock();
+                    catchBlockCount++;
+                    continue;
+                }
+
+                ilGenerator.BeginExceptionBlock();
+            }
+
+            foreach (var handler in handlers.Where(h => h.HandlerStart == instruction.Offset))
+            {
+                if (handler.Flag == "Clause")
+                    ilGenerator.BeginCatchBlock(handler.CatchType);
+                else if (handler.Flag == "Finally")
+                    ilGenerator.BeginFinallyBlock();
+            }
+
+            foreach (var handler in handlers.Where(h => h.HandlerEnd == instruction.Offset))
+            {
+                if (handler.Flag == "Clause")
+                {
+                    var _handlers = handlers.Where(h => h.TryEnd == handler.TryEnd && h.Flag == "Clause");
+                    if (handler.HandlerEnd == _handlers.Select(h => h.HandlerEnd).Max())
+                        ilGenerator.EndExceptionBlock();
+
+                    continue;
+                }
+
+                ilGenerator.EndExceptionBlock();
+            }
         }
 
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
