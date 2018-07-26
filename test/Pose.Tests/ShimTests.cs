@@ -1,14 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading;
 
 using Pose.Exceptions;
-using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-
-using static System.Console;
 
 namespace Pose.Tests
 {
@@ -81,8 +77,7 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).SetMethod, shim.Original);
             Assert.IsNull(shim.Replacement);
         }
-        
-        
+
         [TestMethod]
         public void TestReplacePropertySetterAction()
         {
@@ -113,6 +108,91 @@ namespace Pose.Tests
 
             Assert.IsTrue(getterExecuted, "Getter not executed");
             Assert.IsTrue(setterExecuted, "Setter not executed");
+        }
+
+        [TestMethod]
+        public void TestReplaceConstructor()
+        {
+            var dummyShim = Shim.Replace<DummyForConstructorBase>(() => new DummyForConstructor()).With(() => new DummyForConstructorReplacment());
+            bool? wasCalled = false;
+
+            PoseContext.Isolate(() =>
+            {
+                wasCalled = new DummyHolder().Dummy.ConstructorCalled;
+            }, dummyShim);
+
+            Assert.IsNotNull(wasCalled);
+            Assert.IsFalse(wasCalled.Value);
+        }
+
+        [TestMethod]
+        public void TestReplaceConstructorWithoutGeneric()
+        {
+            var dummyShim = Shim.Replace(() => new DummyForConstructor()).With(() => new DummyForConstructorReplacment());
+            bool? wasCalled = false;
+
+            PoseContext.Isolate(() =>
+            {
+                wasCalled = new DummyHolder().Dummy.ConstructorCalled;
+            }, dummyShim);
+
+            Assert.IsNotNull(wasCalled);
+            Assert.IsFalse(wasCalled.Value);
+        }
+
+        [TestMethod]
+        public void TestReplaceConstructorWithoutGeneric2()
+        {
+            var dummyShim = Shim.Replace(() => new DummyForConstructorReplacment()).With(() => new DummyForConstructorReplacment(true));
+
+            PoseContext.Isolate(() =>
+            {
+                var unused = new DummyForConstructorReplacment();
+            }, dummyShim);
+        }
+
+        [TestMethod]
+        public void TestReplaceConstructorWithIncorrectTypes()
+        {
+            List<string> Replacement() => new List<string>();
+            var exception = Assert.ThrowsException<InvalidShimSignatureException>(() => Shim.Replace<DummyForConstructorBase>(() => new DummyForConstructor()).With(Replacement));
+            Assert.AreEqual("Mismatched construction types", exception.Message);
+        }
+
+        private class DummyHolder
+        {
+            public DummyHolder()
+            {
+                Dummy = new DummyForConstructor();
+            }
+
+            public DummyForConstructorBase Dummy { get; }
+        }
+
+        private abstract class DummyForConstructorBase
+        {
+            public bool? ConstructorCalled { get; protected set; }
+        }
+
+        private class DummyForConstructor : DummyForConstructorBase
+        {
+            public DummyForConstructor()
+            {
+                ConstructorCalled = true;
+            }
+        }
+
+        private class DummyForConstructorReplacment : DummyForConstructorBase
+        {
+            public DummyForConstructorReplacment()
+            {
+                ConstructorCalled = false;
+            }
+
+            public DummyForConstructorReplacment(bool dummyFlag)
+            {
+                ConstructorCalled = false;
+            }
         }
     }
 }
