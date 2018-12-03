@@ -50,5 +50,29 @@ namespace Pose.Tests
             Assert.AreEqual(typeof(void), dynamicMethod.ReturnType);
             Assert.AreEqual(typeof(List<string>), dynamicMethod.GetParameters()[0].ParameterType);
         }
+        
+        [TestMethod]
+        public void TestExceptionHandlersRewrite()
+        {
+            MethodInfo methodInfo = typeof(MethodRewriterTests).GetMethod("ExceptionHandlersRewriteMethod");
+            MethodRewriter methodRewriter = MethodRewriter.CreateRewriter(methodInfo);
+            DynamicMethod dynamicMethod = methodRewriter.Rewrite() as DynamicMethod;
+
+            Delegate func = dynamicMethod.CreateDelegate(typeof(Func<int>));
+            Assert.AreEqual(1, (int)func.DynamicInvoke());
+        }
+
+        public static int ExceptionHandlersRewriteMethod()
+        {
+            try
+            {
+                return 1;
+            }
+            catch
+            {
+                return 0;
+            }
+            finally {}
+        }
     }
 }
