@@ -169,14 +169,6 @@ namespace Pose.IL
                 ilGenerator.BeginExceptionBlock();
             }
 
-            foreach (var handler in handlers.Where(h => h.HandlerStart == instruction.Offset))
-            {
-                if (handler.Flag == "Clause")
-                    ilGenerator.BeginCatchBlock(handler.CatchType);
-                else if (handler.Flag == "Finally")
-                    ilGenerator.BeginFinallyBlock();
-            }
-
             foreach (var handler in handlers.Where(h => h.HandlerEnd == instruction.Offset))
             {
                 if (handler.Flag == "Clause")
@@ -189,6 +181,14 @@ namespace Pose.IL
                 }
 
                 ilGenerator.EndExceptionBlock();
+            }
+            
+            foreach (var handler in handlers.Where(h => h.HandlerStart == instruction.Offset))
+            {
+                if (handler.Flag == "Clause")
+                    ilGenerator.BeginCatchBlock(handler.CatchType);
+                else if (handler.Flag == "Finally")
+                    ilGenerator.BeginFinallyBlock();
             }
         }
 
