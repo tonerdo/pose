@@ -6,6 +6,7 @@ using System.Reflection.Emit;
 
 using Pose.Extensions;
 using Pose.Helpers;
+
 using Mono.Reflection;
 
 namespace Pose.IL
@@ -13,16 +14,7 @@ namespace Pose.IL
     internal class MethodRewriter
     {
         private MethodBase _method;
-        private static List<OpCode> s_IgnoredOpCodes;
-
-        private MethodRewriter()
-        {
-            s_IgnoredOpCodes = new List<OpCode>
-            {
-                OpCodes.Leave,
-                OpCodes.Leave_S
-            };
-        }
+        private static List<OpCode> s_IngoredPrefixes = new List<OpCode> { OpCodes.Tailcall };
 
         public static MethodRewriter CreateRewriter(MethodBase method)
         {
@@ -63,12 +55,13 @@ namespace Pose.IL
             foreach (var clause in methodBody.ExceptionHandlingClauses)
             {
                 ExceptionHandler handler = new ExceptionHandler();
-                handler.Flag = clause.Flags.ToString();
-                handler.CatchType = handler.Flag == "Clause" ? clause.CatchType : null;
+                handler.Flags = clause.Flags;
+                handler.CatchType = clause.Flags == ExceptionHandlingClauseOptions.Clause ? clause.CatchType : null;
                 handler.TryStart = clause.TryOffset;
-                handler.TryEnd = (clause.TryOffset + clause.TryLength);
+                handler.TryEnd = clause.TryOffset + clause.TryLength;
+                handler.FilterStart = clause.Flags == ExceptionHandlingClauseOptions.Filter ? clause.FilterOffset : -1;
                 handler.HandlerStart = clause.HandlerOffset;
-                handler.HandlerEnd = (clause.HandlerOffset + clause.HandlerLength);
+                handler.HandlerEnd = clause.HandlerOffset + clause.HandlerLength;
                 handlers.Add(handler);
             }
 
@@ -77,7 +70,7 @@ namespace Pose.IL
 
             var ifTargets = instructions
                 .Where(i => (i.Operand as Instruction) != null)
-                .Where(i => !s_IgnoredOpCodes.Contains(i.OpCode))
+                .Where(i => !s_IngoredPrefixes.Contains(i.OpCode))
                 .Select(i => (i.Operand as Instruction));
 
             foreach (Instruction instruction in ifTargets)
@@ -96,9 +89,6 @@ namespace Pose.IL
             foreach (var instruction in instructions)
             {
                 EmitILForExceptionHandlers(ilGenerator, instruction, handlers);
-
-                if (s_IgnoredOpCodes.Contains(instruction.OpCode))
-                    continue;
 
                 if (targetInstructions.TryGetValue(instruction.Offset, out Label label))
                     ilGenerator.MarkLabel(label);
@@ -153,17 +143,13 @@ namespace Pose.IL
 
         private void EmitILForExceptionHandlers(ILGenerator ilGenerator, Instruction instruction, List<ExceptionHandler> handlers)
         {
-            int catchBlockCount = 0;
+            bool hasStartedExceptionBlock = false;
             foreach (var handler in handlers.Where(h => h.TryStart == instruction.Offset))
             {
-                if (handler.Flag == "Clause")
+                if (handler.Flags != ExceptionHandlingClauseOptions.Finally)
                 {
-                    if (catchBlockCount >= 1)
-                        continue;
-
-                    ilGenerator.BeginExceptionBlock();
-                    catchBlockCount++;
-                    continue;
+                    if (hasStartedExceptionBlock) continue;
+                    hasStartedExceptionBlock = true;
                 }
 
                 ilGenerator.BeginExceptionBlock();
@@ -171,19 +157,24 @@ namespace Pose.IL
 
             foreach (var handler in handlers.Where(h => h.HandlerStart == instruction.Offset))
             {
-                if (handler.Flag == "Clause")
+                if (handler.Flags == ExceptionHandlingClauseOptions.Clause)
+                {
                     ilGenerator.BeginCatchBlock(handler.CatchType);
-                else if (handler.Flag == "Finally")
+                }
+                else if (handler.Flags == ExceptionHandlingClauseOptions.Finally)
+                {
                     ilGenerator.BeginFinallyBlock();
+                }
             }
 
             foreach (var handler in handlers.Where(h => h.HandlerEnd == instruction.Offset))
             {
-                if (handler.Flag == "Clause")
+                if (handler.Flags == ExceptionHandlingClauseOptions.Clause)
                 {
-                    var _handlers = handlers.Where(h => h.TryEnd == handler.TryEnd && h.Flag == "Clause");
-                    if (handler.HandlerEnd == _handlers.Select(h => h.HandlerEnd).Max())
+                    if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
+                    {
                         ilGenerator.EndExceptionBlock();
+                    }
 
                     continue;
                 }
@@ -193,7 +184,12 @@ namespace Pose.IL
         }
 
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
-            => ilGenerator.Emit(instruction.OpCode);
+        {
+            if (s_IngoredPrefixes.Contains(instruction.OpCode))
+                return;
+
+            ilGenerator.Emit(instruction.OpCode);
+        }
 
         private void EmitILForInlineI(ILGenerator ilGenerator, Instruction instruction)
             => ilGenerator.Emit(instruction.OpCode, (int)instruction.Operand);
@@ -273,7 +269,7 @@ namespace Pose.IL
             else
             {
                 index = ((ParameterInfo)instruction.Operand).Position;
-                index = _method.IsStatic ? index : index + 1;
+                index += _method.IsStatic ? 0 : 1;
             }
 
             if (instruction.OpCode.OperandType == OperandType.ShortInlineVar)
@@ -368,11 +364,11 @@ namespace Pose.IL
             }
             else if (memberInfo.MemberType == MemberTypes.Constructor)
             {
-                EmitILForConstructor(ilGenerator, instruction, memberInfo);
+                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as ConstructorInfo);
             }
             else if (memberInfo.MemberType == MemberTypes.Method)
             {
-                EmitILForMethod(ilGenerator, instruction, memberInfo);
+                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as MethodInfo);
             }
             else
             {
