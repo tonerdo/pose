@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -14,7 +15,12 @@ namespace Pose.IL
     internal class MethodRewriter
     {
         private MethodBase _method;
-        private static List<OpCode> s_IngoredPrefixes = new List<OpCode> { OpCodes.Tailcall };
+
+        private int exceptionBlockLevel;
+
+        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall };
+
+        private static List<OpCode> s_IngoredOpCodes = new List<OpCode> { OpCodes.Endfilter, OpCodes.Endfinally };
 
         public static MethodRewriter CreateRewriter(MethodBase method)
         {
@@ -70,7 +76,6 @@ namespace Pose.IL
 
             var ifTargets = instructions
                 .Where(i => (i.Operand as Instruction) != null)
-                .Where(i => !s_IngoredPrefixes.Contains(i.OpCode))
                 .Select(i => (i.Operand as Instruction));
 
             foreach (Instruction instruction in ifTargets)
@@ -88,10 +93,15 @@ namespace Pose.IL
 
             foreach (var instruction in instructions)
             {
+#if DEBUG
+                Debug.WriteLine(instruction);
+#endif
                 EmitILForExceptionHandlers(ilGenerator, instruction, handlers);
 
                 if (targetInstructions.TryGetValue(instruction.Offset, out Label label))
                     ilGenerator.MarkLabel(label);
+
+                if (s_IngoredOpCodes.Contains(instruction.OpCode)) continue;
 
                 switch (instruction.OpCode.OperandType)
                 {
@@ -147,6 +157,7 @@ namespace Pose.IL
             foreach (var tryBlock in tryBlocks)
             {
                 ilGenerator.BeginExceptionBlock();
+                exceptionBlockLevel++;
             }
 
             var filterBlock = handlers.FirstOrDefault(h => h.FilterStart == instruction.Offset);
@@ -170,6 +181,11 @@ namespace Pose.IL
                 {
                     ilGenerator.BeginFinallyBlock();
                 }
+                else
+                {
+                    // No support for fault blocks
+                    throw new NotSupportedException();
+                }
             }
 
             var handler = handlers.FirstOrDefault(h => h.HandlerEnd == instruction.Offset);
@@ -179,18 +195,20 @@ namespace Pose.IL
                 {
                     // Finally blocks are always the last handler
                     ilGenerator.EndExceptionBlock();
+                    exceptionBlockLevel--;
                 }
                 else if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
                 {
                     // We're dealing with the last catch block
                     ilGenerator.EndExceptionBlock();
+                    exceptionBlockLevel--;
                 }
             }
         }
 
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
         {
-            if (s_IngoredPrefixes.Contains(instruction.OpCode))
+            if (s_IngoredPrefixOpCodes.Contains(instruction.OpCode))
                 return;
 
             ilGenerator.Emit(instruction.OpCode);
@@ -223,37 +241,30 @@ namespace Pose.IL
             Instruction instruction, Dictionary<int, Label> targetInstructions)
         {
             Label targetLabel = targetInstructions[(instruction.Operand as Instruction).Offset];
+
+            OpCode opCode = instruction.OpCode;
+
             // Offset values could change and not be short form anymore
-            if (instruction.OpCode == OpCodes.Br_S)
-                ilGenerator.Emit(OpCodes.Br, targetLabel);
-            else if (instruction.OpCode == OpCodes.Brfalse_S)
-                ilGenerator.Emit(OpCodes.Brfalse, targetLabel);
-            else if (instruction.OpCode == OpCodes.Brtrue_S)
-                ilGenerator.Emit(OpCodes.Brtrue, targetLabel);
-            else if (instruction.OpCode == OpCodes.Beq_S)
-                ilGenerator.Emit(OpCodes.Beq, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bge_S)
-                ilGenerator.Emit(OpCodes.Bge, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bgt_S)
-                ilGenerator.Emit(OpCodes.Bgt, targetLabel);
-            else if (instruction.OpCode == OpCodes.Ble_S)
-                ilGenerator.Emit(OpCodes.Ble, targetLabel);
-            else if (instruction.OpCode == OpCodes.Blt_S)
-                ilGenerator.Emit(OpCodes.Blt, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bne_Un_S)
-                ilGenerator.Emit(OpCodes.Bne_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bge_Un_S)
-                ilGenerator.Emit(OpCodes.Bge_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Bgt_Un_S)
-                ilGenerator.Emit(OpCodes.Bgt_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Ble_Un_S)
-                ilGenerator.Emit(OpCodes.Ble_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Blt_Un_S)
-                ilGenerator.Emit(OpCodes.Blt_Un, targetLabel);
-            else if (instruction.OpCode == OpCodes.Leave_S)
-                ilGenerator.Emit(OpCodes.Leave, targetLabel);
-            else
-                ilGenerator.Emit(instruction.OpCode, targetLabel);
+            if (opCode == OpCodes.Br_S) opCode = OpCodes.Br;
+            else if (opCode == OpCodes.Brfalse_S) opCode = OpCodes.Brfalse;
+            else if (opCode == OpCodes.Brtrue_S) opCode = OpCodes.Brtrue;
+            else if (opCode == OpCodes.Beq_S) opCode = OpCodes.Beq;
+            else if (opCode == OpCodes.Bge_S) opCode = OpCodes.Bge;
+            else if (opCode == OpCodes.Bgt_S) opCode = OpCodes.Bgt;
+            else if (opCode == OpCodes.Ble_S) opCode = OpCodes.Ble;
+            else if (opCode == OpCodes.Blt_S) opCode = OpCodes.Blt;
+            else if (opCode == OpCodes.Bne_Un_S) opCode = OpCodes.Bne_Un;
+            else if (opCode == OpCodes.Bge_Un_S) opCode = OpCodes.Bge_Un;
+            else if (opCode == OpCodes.Bgt_Un_S) opCode = OpCodes.Bgt_Un;
+            else if (opCode == OpCodes.Ble_Un_S) opCode = OpCodes.Ble_Un;
+            else if (opCode == OpCodes.Blt_Un_S) opCode = OpCodes.Blt_Un;
+            else if (opCode == OpCodes.Leave_S) opCode = OpCodes.Leave;
+
+            // Check if 'Leave' opcode is being used in an exception block,
+            // only emit it if that's not the case
+            if (opCode == OpCodes.Leave && exceptionBlockLevel > 0) return;
+
+            ilGenerator.Emit(opCode, targetLabel);
         }
 
         private void EmitILForInlineSwitch(ILGenerator ilGenerator,
