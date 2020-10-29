@@ -143,43 +143,48 @@ namespace Pose.IL
 
         private void EmitILForExceptionHandlers(ILGenerator ilGenerator, Instruction instruction, List<ExceptionHandler> handlers)
         {
-            bool hasStartedExceptionBlock = false;
-            foreach (var handler in handlers.Where(h => h.TryStart == instruction.Offset))
+            var tryBlocks = handlers.Where(h => h.TryStart == instruction.Offset).GroupBy(h => h.TryEnd);
+            foreach (var tryBlock in tryBlocks)
             {
-                if (handler.Flags != ExceptionHandlingClauseOptions.Finally)
-                {
-                    if (hasStartedExceptionBlock) continue;
-                    hasStartedExceptionBlock = true;
-                }
-
                 ilGenerator.BeginExceptionBlock();
             }
 
-            foreach (var handler in handlers.Where(h => h.HandlerStart == instruction.Offset))
+            var filterBlock = handlers.FirstOrDefault(h => h.FilterStart == instruction.Offset);
+            if (filterBlock != null)
             {
-                if (handler.Flags == ExceptionHandlingClauseOptions.Clause)
+                ilGenerator.BeginExceptFilterBlock();
+            }
+
+            var catchOrFinallyBlock = handlers.FirstOrDefault(h => h.HandlerStart == instruction.Offset);
+            if (catchOrFinallyBlock != null)
+            {
+                if (catchOrFinallyBlock.Flags == ExceptionHandlingClauseOptions.Clause)
                 {
-                    ilGenerator.BeginCatchBlock(handler.CatchType);
+                    ilGenerator.BeginCatchBlock(catchOrFinallyBlock.CatchType);
                 }
-                else if (handler.Flags == ExceptionHandlingClauseOptions.Finally)
+                else if (catchOrFinallyBlock.Flags == ExceptionHandlingClauseOptions.Filter)
+                {
+                    ilGenerator.BeginCatchBlock(null);
+                }
+                else if (catchOrFinallyBlock.Flags == ExceptionHandlingClauseOptions.Finally)
                 {
                     ilGenerator.BeginFinallyBlock();
                 }
             }
 
-            foreach (var handler in handlers.Where(h => h.HandlerEnd == instruction.Offset))
+            var handler = handlers.FirstOrDefault(h => h.HandlerEnd == instruction.Offset);
+            if (handler != null)
             {
-                if (handler.Flags == ExceptionHandlingClauseOptions.Clause)
+                if (handler.Flags == ExceptionHandlingClauseOptions.Finally)
                 {
-                    if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
-                    {
-                        ilGenerator.EndExceptionBlock();
-                    }
-
-                    continue;
+                    // Finally blocks are always the last handler
+                    ilGenerator.EndExceptionBlock();
                 }
-
-                ilGenerator.EndExceptionBlock();
+                else if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
+                {
+                    // We're dealing with the last catch block
+                    ilGenerator.EndExceptionBlock();
+                }
             }
         }
 

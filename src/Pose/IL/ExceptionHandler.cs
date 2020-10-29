@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Pose.IL
 {
-    internal struct ExceptionHandler
+    internal class ExceptionHandler
     {
         public Type CatchType;
 
