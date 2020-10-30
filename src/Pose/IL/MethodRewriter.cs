@@ -5,16 +5,17 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using Mono.Reflection;
+
 using Pose.Extensions;
 using Pose.Helpers;
-
-using Mono.Reflection;
+using Pose.IL.DebugHelpers;
 
 namespace Pose.IL
 {
     internal class MethodRewriter
     {
-        private MethodBase _method;
+        private MethodBase m_method;
 
         private int exceptionBlockLevel;
 
@@ -24,37 +25,37 @@ namespace Pose.IL
 
         public static MethodRewriter CreateRewriter(MethodBase method)
         {
-            return new MethodRewriter { _method = method };
+            return new MethodRewriter { m_method = method };
         }
 
         public MethodBase Rewrite()
         {
             List<Type> parameterTypes = new List<Type>();
-            if (!_method.IsStatic)
+            if (!m_method.IsStatic)
             {
-                if (_method.IsForValueType())
-                    parameterTypes.Add(_method.DeclaringType.MakeByRefType());
+                if (m_method.IsForValueType())
+                    parameterTypes.Add(m_method.DeclaringType.MakeByRefType());
                 else
-                    parameterTypes.Add(_method.DeclaringType);
+                    parameterTypes.Add(m_method.DeclaringType);
             }
 
-            parameterTypes.AddRange(_method.GetParameters().Select(p => p.ParameterType));
-            Type returnType = _method.IsConstructor ? typeof(void) : (_method as MethodInfo).ReturnType;
+            parameterTypes.AddRange(m_method.GetParameters().Select(p => p.ParameterType));
+            Type returnType = m_method.IsConstructor ? typeof(void) : (m_method as MethodInfo).ReturnType;
 
             DynamicMethod dynamicMethod = new DynamicMethod(
-                string.Format("dynamic_{0}_{1}", _method.DeclaringType, _method.Name),
+                string.Format("dynamic_{0}_{1}", m_method.DeclaringType, m_method.Name),
                 returnType,
                 parameterTypes.ToArray(),
                 StubHelper.GetOwningModule(),
                 true);
 
-            var methodBody = _method.GetMethodBody();
+            var methodBody = m_method.GetMethodBody();
             var locals = methodBody.LocalVariables;
             var targetInstructions = new Dictionary<int, Label>();
             var handlers = new List<ExceptionHandler>();
 
             var ilGenerator = dynamicMethod.GetILGenerator();
-            var instructions = _method.GetInstructions();
+            var instructions = m_method.GetInstructions();
 
             foreach (var clause in methodBody.ExceptionHandlingClauses)
             {
@@ -90,7 +91,7 @@ namespace Pose.IL
             }
 
 #if DEBUG
-            Debug.WriteLine("\n" + _method.Name);
+            Debug.WriteLine("\n" + m_method);
 #endif
 
             foreach (var instruction in instructions)
@@ -157,11 +158,11 @@ namespace Pose.IL
             byte[] ilBytes = (byte[])bakeByteArray.Invoke(ilGenerator, null);
             Debug.Assert(ilBytes != null && ilBytes.Length > 0);
 
-            var debuggableDynamicMethod = new BrowsableDynamicMethod(dynamicMethod, new DynamicMethodBody(ilBytes, locals));
+            var browsableDynamicMethod = new BrowsableDynamicMethod(dynamicMethod, new DynamicMethodBody(ilBytes, locals));
 
-            Debug.WriteLine("\n" + debuggableDynamicMethod.Name);
+            Debug.WriteLine("\n" + dynamicMethod);
 
-            foreach (var instruction in debuggableDynamicMethod.GetInstructions())
+            foreach (var instruction in browsableDynamicMethod.GetInstructions())
             {
                 Debug.WriteLine(instruction);
             }
@@ -303,7 +304,7 @@ namespace Pose.IL
             else
             {
                 index = ((ParameterInfo)instruction.Operand).Position;
-                index += _method.IsStatic ? 0 : 1;
+                index += m_method.IsStatic ? 0 : 1;
             }
 
             if (instruction.OpCode.OperandType == OperandType.ShortInlineVar)
