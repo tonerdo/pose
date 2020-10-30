@@ -7,13 +7,13 @@ using System.Reflection.Emit;
 
 namespace Pose.IL
 {
-    internal class DebuggableDynamicMethod : MethodInfo
+    internal class BrowsableDynamicMethod : MethodInfo
     {
         private readonly DynamicMethod m_method;
 
         private readonly MethodBody m_methodBody;
 
-        public DebuggableDynamicMethod(DynamicMethod method, MethodBody methodBody)
+        public BrowsableDynamicMethod(DynamicMethod method, MethodBody methodBody)
         {
             m_method = method;
             m_methodBody = methodBody;
