@@ -76,7 +76,7 @@ namespace Pose.IL
 
         public override bool InitLocals => throw new NotImplementedException();
 
-        public override byte[]? GetILAsByteArray() => m_ilBytes;
+        public override byte[] GetILAsByteArray() => m_ilBytes;
 
         public override IList<ExceptionHandlingClause> ExceptionHandlingClauses => throw new NotImplementedException();
     }
