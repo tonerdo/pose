@@ -11,14 +11,11 @@ namespace Pose.IL
     {
         private readonly DynamicMethod m_method;
 
-        private readonly ILGenerator m_ilGenerator;
-
         private readonly MethodBody m_methodBody;
 
-        public DebuggableDynamicMethod(DynamicMethod method, ILGenerator ilGenerator, MethodBody methodBody)
+        public DebuggableDynamicMethod(DynamicMethod method, MethodBody methodBody)
         {
             m_method = method;
-            m_ilGenerator = ilGenerator;
             m_methodBody = methodBody;
         }
 
@@ -28,7 +25,7 @@ namespace Pose.IL
 
         public override RuntimeMethodHandle MethodHandle => throw new NotImplementedException();
 
-        public override Module Module => new DynamicModule(m_ilGenerator);
+        public override Module Module => new DynamicModule(m_method.GetILGenerator());
 
         public override Type DeclaringType => m_method.DeclaringType;
 

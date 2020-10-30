@@ -157,7 +157,7 @@ namespace Pose.IL
             byte[] ilBytes = (byte[])bakeByteArray.Invoke(ilGenerator, null);
             Debug.Assert(ilBytes != null && ilBytes.Length > 0);
 
-            var debuggableDynamicMethod = new DebuggableDynamicMethod(dynamicMethod, ilGenerator, new DynamicMethodBody(ilBytes, locals));
+            var debuggableDynamicMethod = new DebuggableDynamicMethod(dynamicMethod, new DynamicMethodBody(ilBytes, locals));
 
             Debug.WriteLine("\n" + debuggableDynamicMethod.Name);
 
