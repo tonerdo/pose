@@ -48,15 +48,13 @@ namespace Pose.IL
                 StubHelper.GetOwningModule(),
                 true);
 
-            MethodDisassembler disassembler = new MethodDisassembler(_method);
-            MethodBody methodBody = _method.GetMethodBody();
+            var methodBody = _method.GetMethodBody();
+            var locals = methodBody.LocalVariables;
+            var targetInstructions = new Dictionary<int, Label>();
+            var handlers = new List<ExceptionHandler>();
 
-            IList<LocalVariableInfo> locals = methodBody.LocalVariables;
-            Dictionary<int, Label> targetInstructions = new Dictionary<int, Label>();
-            List<ExceptionHandler> handlers = new List<ExceptionHandler>();
-
-            ILGenerator ilGenerator = dynamicMethod.GetILGenerator();
-            var instructions = disassembler.GetILInstructions();
+            var ilGenerator = dynamicMethod.GetILGenerator();
+            var instructions = _method.GetInstructions();
 
             foreach (var clause in methodBody.ExceptionHandlingClauses)
             {
@@ -90,6 +88,10 @@ namespace Pose.IL
                 foreach (Instruction _instruction in _instructions)
                     targetInstructions.TryAdd(_instruction.Offset, ilGenerator.DefineLabel());
             }
+
+#if DEBUG
+            Debug.WriteLine("\n" + _method.Name);
+#endif
 
             foreach (var instruction in instructions)
             {
@@ -148,6 +150,22 @@ namespace Pose.IL
                 }
             }
 
+#if DEBUG
+            var bakeByteArray = typeof(ILGenerator).GetMethod("BakeByteArray", BindingFlags.Instance | BindingFlags.NonPublic);
+            Debug.Assert(bakeByteArray != null);
+
+            byte[] ilBytes = (byte[])bakeByteArray.Invoke(ilGenerator, null);
+            Debug.Assert(ilBytes != null && ilBytes.Length > 0);
+
+            var debuggableDynamicMethod = new DebuggableDynamicMethod(dynamicMethod, ilGenerator, new DynamicMethodBody(ilBytes, locals));
+
+            Debug.WriteLine("\n" + debuggableDynamicMethod.Name);
+
+            foreach (var instruction in debuggableDynamicMethod.GetInstructions())
+            {
+                Debug.WriteLine(instruction);
+            }
+#endif
             return dynamicMethod;
         }
 
