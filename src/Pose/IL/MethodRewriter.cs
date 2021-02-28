@@ -346,6 +346,12 @@ namespace Pose.IL
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
+            if (!StubHelper.ShouldRewriteMethod(methodInfo))
+            {
+                ilGenerator.Emit(instruction.OpCode, methodInfo);
+                return;
+            }
+
             if (instruction.OpCode == OpCodes.Call)
             {
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForMethod(methodInfo));
@@ -409,15 +415,7 @@ namespace Pose.IL
             }
             else if (memberInfo.MemberType == MemberTypes.Method)
             {
-                MethodInfo methodInfo = memberInfo as MethodInfo;
-                if (StubHelper.ShouldRewriteMethod(methodInfo))
-                {
-                    EmitILForMethod(ilGenerator, instruction, memberInfo as MethodInfo);
-                }
-                else
-                {
-                    ilGenerator.Emit(instruction.OpCode, methodInfo);
-                }
+                EmitILForMethod(ilGenerator, instruction, memberInfo as MethodInfo);
             }
             else
             {
