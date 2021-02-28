@@ -344,45 +344,51 @@ namespace Pose.IL
             PoseContext.StubCache.TryAdd(constructorInfo, stub);
         }
 
-        private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
+        private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
-            MethodInfo methodInfo = memberInfo as MethodInfo;
-            if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
+            if (instruction.OpCode == OpCodes.Call)
             {
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForMethod(methodInfo));
                 return;
             }
 
-            MethodBody methodBody = methodInfo.GetMethodBody();
-            if (methodBody == null && !methodInfo.IsAbstract)
-            {
-                ilGenerator.Emit(instruction.OpCode, methodInfo);
-                return;
-            }
+            ilGenerator.Emit(instruction.OpCode, methodInfo);
+            // if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
+            // {
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+            //     ilGenerator.Emit(OpCodes.Call, stub);
+            //     return;
+            // }
 
-            if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
-            {
-                stub = instruction.OpCode == OpCodes.Call ?
-                    Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                PoseContext.StubCache.TryAdd(methodInfo, stub);
-            }
-            else if (instruction.OpCode == OpCodes.Ldftn)
-            {
-                stub = Stubs.GenerateStubForMethodPointer(methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
-                PoseContext.StubCache.TryAdd(methodInfo, stub);
-            }
-            else
-            {
-                ilGenerator.Emit(instruction.OpCode, methodInfo);
-            }
+            // MethodBody methodBody = methodInfo.GetMethodBody();
+            // if (methodBody == null && !methodInfo.IsAbstract)
+            // {
+            //     ilGenerator.Emit(instruction.OpCode, methodInfo);
+            //     return;
+            // }
+
+            // if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
+            // {
+            //     stub = instruction.OpCode == OpCodes.Call ?
+            //         Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+            //     ilGenerator.Emit(OpCodes.Call, stub);
+            //     PoseContext.StubCache.TryAdd(methodInfo, stub);
+            // }
+            // else if (instruction.OpCode == OpCodes.Ldftn)
+            // {
+            //     stub = Stubs.GenerateStubForMethodPointer(methodInfo);
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
+            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+            //     ilGenerator.Emit(OpCodes.Call, stub);
+            //     PoseContext.StubCache.TryAdd(methodInfo, stub);
+            // }
+            // else
+            // {
+            //     ilGenerator.Emit(instruction.OpCode, methodInfo);
+            // }
         }
 
         private void EmitILForInlineMember(ILGenerator ilGenerator, Instruction instruction)
@@ -403,7 +409,15 @@ namespace Pose.IL
             }
             else if (memberInfo.MemberType == MemberTypes.Method)
             {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as MethodInfo);
+                MethodInfo methodInfo = memberInfo as MethodInfo;
+                if (StubHelper.ShouldRewriteMethod(methodInfo))
+                {
+                    EmitILForMethod(ilGenerator, instruction, memberInfo as MethodInfo);
+                }
+                else
+                {
+                    ilGenerator.Emit(instruction.OpCode, methodInfo);
+                }
             }
             else
             {

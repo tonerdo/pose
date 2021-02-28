@@ -54,6 +54,11 @@ namespace Pose.Helpers
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;
 
+        public static bool ShouldRewriteMethod(MethodInfo methodInfo)
+        {
+            return methodInfo.CustomAttributes.Any(ca => ca.AttributeType.Name == "System.Runtime.CompilerServices.IntrinsicAttribute");
+        }
+
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
         {
             if (shim.Type == null || type == shim.Type)

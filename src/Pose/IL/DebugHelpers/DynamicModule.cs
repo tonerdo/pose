@@ -38,13 +38,39 @@ namespace Pose.IL.DebugHelpers
             var handle = dynamicScope.GetType().GetMethod("get_Item", BindingFlags.Instance | BindingFlags.NonPublic)
                     .Invoke(dynamicScope, new object[] { metadataToken });
 
-            return handle switch
+            if (handle is RuntimeTypeHandle typeHandle)
             {
-                RuntimeTypeHandle typeHandle => TypeInfo.GetTypeFromHandle(typeHandle).GetTypeInfo(),
-                RuntimeMethodHandle methodHandle => MethodBase.GetMethodFromHandle(methodHandle),
-                RuntimeFieldHandle fieldHandle => FieldInfo.GetFieldFromHandle(fieldHandle),
-                _ => throw new NotSupportedException(handle.ToString()),
-            };
+                return TypeInfo.GetTypeFromHandle(typeHandle).GetTypeInfo();
+            }
+
+            if (handle is RuntimeMethodHandle methodHandle)
+            {
+                return MethodBase.GetMethodFromHandle(methodHandle);
+            }
+
+            if (handle.GetType().ToString() == "System.Reflection.Emit.GenericMethodInfo")
+            {
+                var methodHandleInfo = handle.GetType().GetField("m_methodHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+                return MethodBase.GetMethodFromHandle((RuntimeMethodHandle)methodHandleInfo.GetValue(handle));
+            }
+
+            if (handle is RuntimeFieldHandle fieldHandle)
+            {
+                return FieldInfo.GetFieldFromHandle(fieldHandle);
+            }
+
+            if (handle.GetType().ToString() == "System.Reflection.Emit.GenericFieldInfo")
+            {
+                var fieldHandleInfo = handle.GetType().GetField("m_fieldHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+                return FieldInfo.GetFieldFromHandle((RuntimeFieldHandle)fieldHandleInfo.GetValue(handle));
+            }
+
+            if (handle is DynamicMethod dynamicMethod)
+            {
+                return dynamicMethod;
+            }
+
+            throw new NotSupportedException(handle.ToString());
         }
 
         public override byte[] ResolveSignature(int metadataToken)
