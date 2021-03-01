@@ -56,7 +56,9 @@ namespace Pose.Helpers
 
         public static bool ShouldRewriteMethod(MethodInfo methodInfo)
         {
-            return methodInfo.CustomAttributes.Any(ca => ca.AttributeType.Name == "System.Runtime.CompilerServices.IntrinsicAttribute");
+            return !methodInfo.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") &&
+                    (methodInfo.MethodImplementationFlags & MethodImplAttributes.InternalCall) == 0 &&
+                    (methodInfo.Attributes & MethodAttributes.PinvokeImpl) == 0;
         }
 
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
