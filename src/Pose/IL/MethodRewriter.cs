@@ -19,7 +19,7 @@ namespace Pose.IL
 
         private int exceptionBlockLevel;
 
-        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall };
+        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall, OpCodes.Constrained };
 
         private static List<OpCode> s_IngoredOpCodes = new List<OpCode> { OpCodes.Endfilter, OpCodes.Endfinally };
 
@@ -358,43 +358,13 @@ namespace Pose.IL
                 return;
             }
 
+            if (instruction.OpCode == OpCodes.Callvirt)
+            {
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
+                return;
+            }
+
             ilGenerator.Emit(instruction.OpCode, methodInfo);
-            // if (PoseContext.StubCache.TryGetValue(methodInfo, out DynamicMethod stub))
-            // {
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-            //     ilGenerator.Emit(OpCodes.Call, stub);
-            //     return;
-            // }
-
-            // MethodBody methodBody = methodInfo.GetMethodBody();
-            // if (methodBody == null && !methodInfo.IsAbstract)
-            // {
-            //     ilGenerator.Emit(instruction.OpCode, methodInfo);
-            //     return;
-            // }
-
-            // if (instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt)
-            // {
-            //     stub = instruction.OpCode == OpCodes.Call ?
-            //         Stubs.GenerateStubForMethod(methodInfo) : Stubs.GenerateStubForVirtualMethod(methodInfo);
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-            //     ilGenerator.Emit(OpCodes.Call, stub);
-            //     PoseContext.StubCache.TryAdd(methodInfo, stub);
-            // }
-            // else if (instruction.OpCode == OpCodes.Ldftn)
-            // {
-            //     stub = Stubs.GenerateStubForMethodPointer(methodInfo);
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-            //     ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-            //     ilGenerator.Emit(OpCodes.Call, stub);
-            //     PoseContext.StubCache.TryAdd(methodInfo, stub);
-            // }
-            // else
-            // {
-            //     ilGenerator.Emit(instruction.OpCode, methodInfo);
-            // }
         }
 
         private void EmitILForInlineMember(ILGenerator ilGenerator, Instruction instruction)
