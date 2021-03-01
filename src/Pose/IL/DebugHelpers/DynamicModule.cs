@@ -50,8 +50,9 @@ namespace Pose.IL.DebugHelpers
 
             if (handle.GetType().ToString() == "System.Reflection.Emit.GenericMethodInfo")
             {
-                var methodHandleInfo = handle.GetType().GetField("m_methodHandle", BindingFlags.Instance | BindingFlags.NonPublic);
-                return MethodBase.GetMethodFromHandle((RuntimeMethodHandle)methodHandleInfo.GetValue(handle));
+                var methodHandleFieldInfo = handle.GetType().GetField("m_methodHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+                var typeHandleFieldInfo = handle.GetType().GetField("m_context", BindingFlags.Instance | BindingFlags.NonPublic);
+                return MethodBase.GetMethodFromHandle((RuntimeMethodHandle)methodHandleFieldInfo.GetValue(handle), (RuntimeTypeHandle)typeHandleFieldInfo.GetValue(handle));
             }
 
             if (handle is RuntimeFieldHandle fieldHandle)
@@ -61,8 +62,9 @@ namespace Pose.IL.DebugHelpers
 
             if (handle.GetType().ToString() == "System.Reflection.Emit.GenericFieldInfo")
             {
-                var fieldHandleInfo = handle.GetType().GetField("m_fieldHandle", BindingFlags.Instance | BindingFlags.NonPublic);
-                return FieldInfo.GetFieldFromHandle((RuntimeFieldHandle)fieldHandleInfo.GetValue(handle));
+                var fieldHandleFieldInfo = handle.GetType().GetField("m_fieldHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+                var typeHandleFieldInfo = handle.GetType().GetField("m_context", BindingFlags.Instance | BindingFlags.NonPublic);
+                return FieldInfo.GetFieldFromHandle((RuntimeFieldHandle)fieldHandleFieldInfo.GetValue(handle), (RuntimeTypeHandle)typeHandleFieldInfo.GetValue(handle));
             }
 
             if (handle is DynamicMethod dynamicMethod)
