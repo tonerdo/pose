@@ -17,9 +17,11 @@ namespace Pose.IL
     {
         private MethodBase m_method;
 
-        private int exceptionBlockLevel;
+        private int m_exceptionBlockLevel;
 
-        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall, OpCodes.Constrained };
+        private TypeInfo m_constrainedType;
+
+        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall };
 
         private static List<OpCode> s_IngoredOpCodes = new List<OpCode> { OpCodes.Endfilter, OpCodes.Endfinally };
 
@@ -178,7 +180,7 @@ namespace Pose.IL
             foreach (var tryBlock in tryBlocks)
             {
                 ilGenerator.BeginExceptionBlock();
-                exceptionBlockLevel++;
+                m_exceptionBlockLevel++;
             }
 
             var filterBlock = handlers.FirstOrDefault(h => h.FilterStart == instruction.Offset);
@@ -216,13 +218,13 @@ namespace Pose.IL
                 {
                     // Finally blocks are always the last handler
                     ilGenerator.EndExceptionBlock();
-                    exceptionBlockLevel--;
+                    m_exceptionBlockLevel--;
                 }
                 else if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
                 {
                     // We're dealing with the last catch block
                     ilGenerator.EndExceptionBlock();
-                    exceptionBlockLevel--;
+                    m_exceptionBlockLevel--;
                 }
             }
         }
@@ -280,7 +282,7 @@ namespace Pose.IL
 
             // Check if 'Leave' opcode is being used in an exception block,
             // only emit it if that's not the case
-            if (opCode == OpCodes.Leave && exceptionBlockLevel > 0) return;
+            if (opCode == OpCodes.Leave && m_exceptionBlockLevel > 0) return;
 
             ilGenerator.Emit(opCode, targetLabel);
         }
@@ -310,6 +312,17 @@ namespace Pose.IL
                 ilGenerator.Emit(instruction.OpCode, (byte)index);
             else
                 ilGenerator.Emit(instruction.OpCode, (short)index);
+        }
+
+        private void EmitILForType(ILGenerator ilGenerator, Instruction instruction, TypeInfo typeInfo)
+        {
+            if (instruction.OpCode == OpCodes.Constrained)
+            {
+                m_constrainedType = typeInfo;
+                return;
+            }
+
+            ilGenerator.Emit(instruction.OpCode, typeInfo);
         }
 
         private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
@@ -347,6 +360,12 @@ namespace Pose.IL
         {
             if (!StubHelper.ShouldRewriteMethod(methodInfo))
             {
+                if (m_constrainedType != null)
+                {
+                    ilGenerator.Emit(OpCodes.Constrained, m_constrainedType);
+                    m_constrainedType = null;
+                }
+
                 ilGenerator.Emit(instruction.OpCode, methodInfo);
                 return;
             }
@@ -360,6 +379,7 @@ namespace Pose.IL
             if (instruction.OpCode == OpCodes.Callvirt)
             {
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
+                m_constrainedType = null;
                 return;
             }
 
@@ -371,16 +391,16 @@ namespace Pose.IL
             MemberInfo memberInfo = (MemberInfo)instruction.Operand;
             if (memberInfo.MemberType == MemberTypes.Field)
             {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as FieldInfo);
+                ilGenerator.Emit(instruction.OpCode, memberInfo as FieldInfo);
             }
             else if (memberInfo.MemberType == MemberTypes.TypeInfo
                 || memberInfo.MemberType == MemberTypes.NestedType)
             {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as TypeInfo);
+                EmitILForType(ilGenerator, instruction, memberInfo as TypeInfo);
             }
             else if (memberInfo.MemberType == MemberTypes.Constructor)
             {
-                ilGenerator.Emit(instruction.OpCode, (MemberInfo)instruction.Operand as ConstructorInfo);
+                ilGenerator.Emit(instruction.OpCode, memberInfo as ConstructorInfo);
             }
             else if (memberInfo.MemberType == MemberTypes.Method)
             {
