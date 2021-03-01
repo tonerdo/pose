@@ -21,8 +21,6 @@ namespace Pose.IL
 
         private TypeInfo m_constrainedType;
 
-        private static List<OpCode> s_IngoredPrefixOpCodes = new List<OpCode> { OpCodes.Tailcall };
-
         private static List<OpCode> s_IngoredOpCodes = new List<OpCode> { OpCodes.Endfilter, OpCodes.Endfinally };
 
         public static MethodRewriter CreateRewriter(MethodBase method)
@@ -101,7 +99,6 @@ namespace Pose.IL
 #if DEBUG
                 Debug.WriteLine(instruction);
 #endif
-                if (s_IngoredPrefixOpCodes.Contains(instruction.OpCode)) continue;
 
                 EmitILForExceptionHandlers(ilGenerator, instruction, handlers);
 
