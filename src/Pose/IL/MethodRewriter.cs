@@ -43,7 +43,7 @@ namespace Pose.IL
             Type returnType = m_method.IsConstructor ? typeof(void) : (m_method as MethodInfo).ReturnType;
 
             DynamicMethod dynamicMethod = new DynamicMethod(
-                string.Format("impl_{0}_{1}", m_method.DeclaringType, m_method.Name),
+                string.Format("impl{0}_{1}_{2}", m_method.IsVirtual ? "_virt" : string.Empty, m_method.DeclaringType, m_method.Name),
                 returnType,
                 parameterTypes.ToArray(),
                 StubHelper.GetOwningModule(),
@@ -99,6 +99,8 @@ namespace Pose.IL
 #if DEBUG
                 Debug.WriteLine(instruction);
 #endif
+                if (s_IngoredPrefixOpCodes.Contains(instruction.OpCode)) continue;
+
                 EmitILForExceptionHandlers(ilGenerator, instruction, handlers);
 
                 if (targetInstructions.TryGetValue(instruction.Offset, out Label label))
@@ -227,9 +229,6 @@ namespace Pose.IL
 
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
         {
-            if (s_IngoredPrefixOpCodes.Contains(instruction.OpCode))
-                return;
-
             ilGenerator.Emit(instruction.OpCode);
         }
 
