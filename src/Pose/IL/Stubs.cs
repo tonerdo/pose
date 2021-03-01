@@ -35,7 +35,7 @@ namespace Pose.IL
                 true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
-            ilGenerator.DeclareLocal(typeof(MethodInfo));
+            ilGenerator.DeclareLocal(typeof(IntPtr));
             Label returnLabel = ilGenerator.DefineLabel();
 
             ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
@@ -46,6 +46,8 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
             ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("Rewrite"));
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+
+            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
             ilGenerator.Emit(OpCodes.Stloc_0);
 
             for (int i = 0; i < signatureParamTypes.Count; i++)
@@ -53,7 +55,6 @@ namespace Pose.IL
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             }
             ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
             ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
 
             ilGenerator.MarkLabel(returnLabel);
