@@ -375,8 +375,13 @@ namespace Pose.IL
 
             if (instruction.OpCode == OpCodes.Callvirt)
             {
-                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
-                m_constrainedType = null;
+                if (m_constrainedType != null)
+                {
+                    ilGenerator.Emit(OpCodes.Constrained, m_constrainedType);
+                    m_constrainedType = null;
+                }
+
+                ilGenerator.Emit(OpCodes.Callvirt, methodInfo);
                 return;
             }
 
