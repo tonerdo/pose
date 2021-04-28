@@ -36,6 +36,19 @@ namespace Pose.IL
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
+            if (methodInfo.GetMethodBody() == null)
+            {
+                // Method has no body, simply forward arguments to original or shim
+                for (int i = 0; i < signatureParamTypes.Count; i++)
+                {
+                    ilGenerator.Emit(OpCodes.Ldarg, i);
+                }
+
+                ilGenerator.Emit(OpCodes.Call, methodInfo);
+                ilGenerator.Emit(OpCodes.Ret);
+                return stub;
+            }
+
             ilGenerator.DeclareLocal(typeof(IntPtr));
 
             Label rewriteLabel = ilGenerator.DefineLabel();
