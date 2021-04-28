@@ -56,8 +56,9 @@ namespace Pose.Helpers
 
         public static bool IsIntrinsic(MethodInfo methodInfo)
         {
-            return !methodInfo.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") &&
-                    !methodInfo.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
+            return methodInfo.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    methodInfo.DeclaringType.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    methodInfo.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
         }
 
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
