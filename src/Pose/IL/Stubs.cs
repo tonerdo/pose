@@ -52,9 +52,10 @@ namespace Pose.IL
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
-            if (methodInfo.GetMethodBody() == null)
+            if (methodInfo.GetMethodBody() == null || StubHelper.IsIntrinsic(methodInfo))
             {
-                // Method has no body, simply forward arguments to original or shim
+                // Method has no body or is a compiler intrinsic,
+                // simply forward arguments to original or shim
                 for (int i = 0; i < signatureParamTypes.Count; i++)
                 {
                     ilGenerator.Emit(OpCodes.Ldarg, i);

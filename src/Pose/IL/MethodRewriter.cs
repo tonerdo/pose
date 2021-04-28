@@ -355,18 +355,6 @@ namespace Pose.IL
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
-            if (!StubHelper.IsIntrinsic(methodInfo))
-            {
-                if (m_constrainedType != null)
-                {
-                    ilGenerator.Emit(OpCodes.Constrained, m_constrainedType);
-                    m_constrainedType = null;
-                }
-
-                ilGenerator.Emit(instruction.OpCode, methodInfo);
-                return;
-            }
-
             if (instruction.OpCode == OpCodes.Call)
             {
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForMethod(methodInfo));
