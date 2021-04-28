@@ -12,6 +12,22 @@ namespace Pose.IL
 {
     internal static class Stubs
     {
+        private static MethodInfo s_getMethodFromHandleMethod;
+
+        private static MethodInfo s_createRewriterMethod;
+
+        private static MethodInfo s_rewriteMethod;
+
+        private static MethodInfo s_getMethodPointerMethod;
+
+        static Stubs()
+        {
+            s_getMethodFromHandleMethod = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) });
+            s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) });
+            s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
+            s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
+        }
+
         public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
         {
             ParameterInfo[] parameters = methodInfo.GetParameters();
@@ -57,17 +73,17 @@ namespace Pose.IL
             // Inject method info into instruction stream
             ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
             ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
-            ilGenerator.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
+            ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
 
             // Rewrite method
             ilGenerator.MarkLabel(rewriteLabel);
-            ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) }));
-            ilGenerator.Emit(OpCodes.Call, typeof(MethodRewriter).GetMethod("Rewrite"));
+            ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
+            ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
 
             // Retrieve pointer to rewritten method
-            ilGenerator.Emit(OpCodes.Call, typeof(StubHelper).GetMethod("GetMethodPointer"));
+            ilGenerator.Emit(OpCodes.Call, s_getMethodPointerMethod);
             ilGenerator.Emit(OpCodes.Stloc_0);
 
             // Setup stack and make indirect call
