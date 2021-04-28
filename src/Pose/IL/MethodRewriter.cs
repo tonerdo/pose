@@ -355,7 +355,7 @@ namespace Pose.IL
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
-            if (!StubHelper.ShouldRewriteMethod(methodInfo))
+            if (!StubHelper.IsIntrinsic(methodInfo))
             {
                 if (m_constrainedType != null)
                 {
