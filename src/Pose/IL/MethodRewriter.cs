@@ -186,6 +186,23 @@ namespace Pose.IL
                 ilGenerator.BeginExceptFilterBlock();
             }
 
+            var handler = handlers.FirstOrDefault(h => h.HandlerEnd == instruction.Offset);
+            if (handler != null)
+            {
+                if (handler.Flags == ExceptionHandlingClauseOptions.Finally)
+                {
+                    // Finally blocks are always the last handler
+                    ilGenerator.EndExceptionBlock();
+                    m_exceptionBlockLevel--;
+                }
+                else if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
+                {
+                    // We're dealing with the last catch block
+                    ilGenerator.EndExceptionBlock();
+                    m_exceptionBlockLevel--;
+                }
+            }
+
             var catchOrFinallyBlock = handlers.FirstOrDefault(h => h.HandlerStart == instruction.Offset);
             if (catchOrFinallyBlock != null)
             {
@@ -205,23 +222,6 @@ namespace Pose.IL
                 {
                     // No support for fault blocks
                     throw new NotSupportedException();
-                }
-            }
-
-            var handler = handlers.FirstOrDefault(h => h.HandlerEnd == instruction.Offset);
-            if (handler != null)
-            {
-                if (handler.Flags == ExceptionHandlingClauseOptions.Finally)
-                {
-                    // Finally blocks are always the last handler
-                    ilGenerator.EndExceptionBlock();
-                    m_exceptionBlockLevel--;
-                }
-                else if (handler.HandlerEnd == handlers.Where(h => h.TryStart == handler.TryStart && h.TryEnd == handler.TryEnd).Max(h => h.HandlerEnd))
-                {
-                    // We're dealing with the last catch block
-                    ilGenerator.EndExceptionBlock();
-                    m_exceptionBlockLevel--;
                 }
             }
         }
@@ -363,13 +363,8 @@ namespace Pose.IL
 
             if (instruction.OpCode == OpCodes.Callvirt)
             {
-                if (m_constrainedType != null)
-                {
-                    ilGenerator.Emit(OpCodes.Constrained, m_constrainedType);
-                    m_constrainedType = null;
-                }
-
-                ilGenerator.Emit(OpCodes.Callvirt, methodInfo);
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
+                m_constrainedType = null;
                 return;
             }
 
