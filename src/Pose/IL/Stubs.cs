@@ -125,7 +125,7 @@ namespace Pose.IL
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
-            if (methodInfo.GetMethodBody() == null || StubHelper.IsIntrinsic(methodInfo))
+            if ((methodInfo.GetMethodBody() == null && !methodInfo.IsAbstract) || StubHelper.IsIntrinsic(methodInfo))
             {
                 // Method has no body or is a compiler intrinsic,
                 // simply forward arguments to original or shim
