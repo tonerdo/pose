@@ -33,18 +33,14 @@ namespace Pose.IL
 
         public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
         {
-            ParameterInfo[] parameters = methodInfo.GetParameters();
-
             List<Type> signatureParamTypes = new List<Type>();
             if (!methodInfo.IsStatic)
             {
-                if (methodInfo.IsForValueType())
-                    signatureParamTypes.Add(methodInfo.DeclaringType.MakeByRefType());
-                else
-                    signatureParamTypes.Add(methodInfo.DeclaringType);
+                Type thisType = methodInfo.IsForValueType() ? methodInfo.DeclaringType.MakeByRefType() : methodInfo.DeclaringType;
+                signatureParamTypes.Add(thisType);
             }
 
-            signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
+            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
                 StubHelper.CreateStubNameFromMethod("stub", methodInfo),
@@ -106,15 +102,11 @@ namespace Pose.IL
 
         public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo)
         {
-            ParameterInfo[] parameters = methodInfo.GetParameters();
+            Type thisType = methodInfo.IsForValueType() ? methodInfo.DeclaringType.MakeByRefType() : methodInfo.DeclaringType;
 
             List<Type> signatureParamTypes = new List<Type>();
-            if (methodInfo.IsForValueType())
-                signatureParamTypes.Add(methodInfo.DeclaringType.MakeByRefType());
-            else
-                signatureParamTypes.Add(methodInfo.DeclaringType);
-
-            signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
+            signatureParamTypes.Add(thisType);
+            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
                 StubHelper.CreateStubNameFromMethod("stub_virt", methodInfo),
