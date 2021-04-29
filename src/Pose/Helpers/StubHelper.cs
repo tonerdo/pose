@@ -61,6 +61,25 @@ namespace Pose.Helpers
                     methodInfo.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
         }
 
+        public static string CreateStubNameFromMethod(string prefix, MethodBase methodInfo)
+        {
+            string name = prefix;
+            name += "_";
+            name += methodInfo.DeclaringType.ToString();
+            name += "_";
+            name += methodInfo.Name;
+
+            var genericArguments = methodInfo.GetGenericArguments();
+            if (genericArguments.Length > 0)
+            {
+                name += "[";
+                name += string.Join(',', genericArguments.Select(g => g.Name));
+                name += "]";
+            }
+
+            return name;
+        }
+
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
         {
             if (shim.Type == null || type == shim.Type)

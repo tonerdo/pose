@@ -43,7 +43,7 @@ namespace Pose.IL
             Type returnType = m_method.IsConstructor ? typeof(void) : (m_method as MethodInfo).ReturnType;
 
             DynamicMethod dynamicMethod = new DynamicMethod(
-                string.Format("impl{0}_{1}_{2}", m_method.IsVirtual ? "_virt" : string.Empty, m_method.DeclaringType, m_method.Name),
+                StubHelper.CreateStubNameFromMethod("impl", m_method),
                 returnType,
                 parameterTypes.ToArray(),
                 StubHelper.GetOwningModule(),

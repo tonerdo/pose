@@ -47,7 +47,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("stub_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
+                StubHelper.CreateStubNameFromMethod("stub", methodInfo),
                 methodInfo.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
@@ -117,7 +117,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(parameters.Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                string.Format("stub_virt_{0}_{1}", methodInfo.DeclaringType, methodInfo.Name),
+                StubHelper.CreateStubNameFromMethod("stub_virt", methodInfo),
                 methodInfo.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
