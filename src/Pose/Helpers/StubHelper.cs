@@ -47,9 +47,15 @@ namespace Pose.Helpers
 
         public static MethodInfo GetRuntimeMethodForVirtual(object obj, MethodInfo methodInfo)
         {
+            Type thisType = obj.GetType();
+            if (thisType == methodInfo.DeclaringType)
+            {
+                return methodInfo;
+            }
+
             BindingFlags bindingFlags = BindingFlags.Instance | (methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
             Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            return obj.GetType().GetMethod(methodInfo.Name, bindingFlags, null, types, null);
+            return thisType.GetMethod(methodInfo.Name, bindingFlags, null, types, null);
         }
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;
