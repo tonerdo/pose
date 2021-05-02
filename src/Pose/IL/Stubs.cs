@@ -102,7 +102,7 @@ namespace Pose.IL
 
         public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo)
         {
-            Type thisType = methodInfo.IsForValueType() ? methodInfo.DeclaringType.MakeByRefType() : methodInfo.DeclaringType;
+            Type thisType = methodInfo.DeclaringType;
 
             List<Type> signatureParamTypes = new List<Type>();
             signatureParamTypes.Add(thisType);
