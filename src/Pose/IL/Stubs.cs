@@ -28,7 +28,7 @@ namespace Pose.IL
             s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) });
             s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
             s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
-            s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("GetRuntimeMethodForVirtual");
+            s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("GetRuntimeMethodForVirtual", new Type[] { typeof(object), typeof(MethodInfo) });
         }
 
         public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
@@ -90,6 +90,76 @@ namespace Pose.IL
             for (int i = 0; i < signatureParamTypes.Count; i++)
             {
                 ilGenerator.Emit(OpCodes.Ldarg, i);
+            }
+            ilGenerator.Emit(OpCodes.Ldloc_0);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
+
+            ilGenerator.MarkLabel(returnLabel);
+            ilGenerator.Emit(OpCodes.Ret);
+
+            return stub;
+        }
+
+        public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo, TypeInfo constrainedType)
+        {
+            Type thisType = constrainedType.MakeByRefType();
+            MethodInfo actualMethod = StubHelper.GetRuntimeMethodForVirtual(constrainedType, methodInfo);
+
+            List<Type> signatureParamTypes = new List<Type>();
+            signatureParamTypes.Add(thisType);
+            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
+
+            DynamicMethod stub = new DynamicMethod(
+                StubHelper.CreateStubNameFromMethod("stub_virt", methodInfo),
+                methodInfo.ReturnType,
+                signatureParamTypes.ToArray(),
+                StubHelper.GetOwningModule(),
+                true);
+            
+            ILGenerator ilGenerator = stub.GetILGenerator();
+
+            ilGenerator.DeclareLocal(typeof(IntPtr));
+
+            Label rewriteLabel = ilGenerator.DefineLabel();
+            Label returnLabel = ilGenerator.DefineLabel();
+
+            // Inject method info into instruction stream
+            ilGenerator.Emit(OpCodes.Ldtoken, actualMethod);
+            ilGenerator.Emit(OpCodes.Ldtoken, actualMethod.DeclaringType);
+            ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+
+            // Rewrite method
+            ilGenerator.MarkLabel(rewriteLabel);
+            ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
+            ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+
+            // Retrieve pointer to rewritten method
+            ilGenerator.Emit(OpCodes.Call, s_getMethodPointerMethod);
+            ilGenerator.Emit(OpCodes.Stloc_0);
+
+            // Setup stack and make indirect call
+            for (int i = 0; i < signatureParamTypes.Count; i++)
+            {
+                ilGenerator.Emit(OpCodes.Ldarg, i);
+                if (i == 0)
+                {
+                    if (!constrainedType.IsValueType)
+                    {
+                        ilGenerator.Emit(OpCodes.Ldind_Ref);
+                        signatureParamTypes[i] = constrainedType;
+                    }
+                    else
+                    {
+                        if (actualMethod.DeclaringType != constrainedType)
+                        {
+                            ilGenerator.Emit(OpCodes.Ldobj, constrainedType);
+                            ilGenerator.Emit(OpCodes.Box, constrainedType);
+                            signatureParamTypes[i] = actualMethod.DeclaringType;
+                        }
+                    }
+                }
             }
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);

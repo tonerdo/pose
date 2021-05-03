@@ -47,7 +47,11 @@ namespace Pose.Helpers
 
         public static MethodInfo GetRuntimeMethodForVirtual(object obj, MethodInfo methodInfo)
         {
-            Type thisType = obj.GetType();
+            return GetRuntimeMethodForVirtual(obj.GetType(), methodInfo);
+        }
+
+        public static MethodInfo GetRuntimeMethodForVirtual(Type thisType, MethodInfo methodInfo)
+        {
             if (thisType == methodInfo.DeclaringType)
             {
                 return methodInfo;
