@@ -52,11 +52,7 @@ namespace Pose.Helpers
 
         public static MethodInfo GetRuntimeMethodForVirtual(Type thisType, MethodInfo methodInfo)
         {
-            if (thisType == methodInfo.DeclaringType)
-            {
-                return methodInfo;
-            }
-
+            if (thisType == methodInfo.DeclaringType) return methodInfo;
             BindingFlags bindingFlags = BindingFlags.Instance | (methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
             Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
             return thisType.GetMethod(methodInfo.Name, bindingFlags, null, types, null);

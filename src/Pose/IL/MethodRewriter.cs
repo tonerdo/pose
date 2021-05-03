@@ -33,10 +33,8 @@ namespace Pose.IL
             List<Type> parameterTypes = new List<Type>();
             if (!m_method.IsStatic)
             {
-                if (m_method.IsForValueType())
-                    parameterTypes.Add(m_method.DeclaringType.MakeByRefType());
-                else
-                    parameterTypes.Add(m_method.DeclaringType);
+                Type thisType = m_method.IsForValueType() ? m_method.DeclaringType.MakeByRefType() : m_method.DeclaringType;
+                parameterTypes.Add(thisType);
             }
 
             parameterTypes.AddRange(m_method.GetParameters().Select(p => p.ParameterType));
@@ -363,8 +361,14 @@ namespace Pose.IL
 
             if (instruction.OpCode == OpCodes.Callvirt)
             {
+                if (m_constrainedType != null)
+                {
+                    ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo, m_constrainedType));
+                    m_constrainedType = null;
+                    return;
+                }
+
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
-                m_constrainedType = null;
                 return;
             }
 
