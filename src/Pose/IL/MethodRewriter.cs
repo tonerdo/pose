@@ -353,6 +353,12 @@ namespace Pose.IL
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
+            if (methodInfo.InSystemAssembly())
+            {
+                if (!methodInfo.DeclaringType.IsPublic) goto forward;
+                if (!methodInfo.IsPublic && !methodInfo.IsFamily && !methodInfo.IsFamilyOrAssembly) goto forward;
+            }
+
             if (instruction.OpCode == OpCodes.Call)
             {
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForMethod(methodInfo));
@@ -372,6 +378,7 @@ namespace Pose.IL
                 return;
             }
 
+        forward:
             ilGenerator.Emit(instruction.OpCode, methodInfo);
         }
 
