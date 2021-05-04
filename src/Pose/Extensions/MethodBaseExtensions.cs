@@ -9,7 +9,7 @@ namespace Pose.Extensions
 
         public static bool InSystemAssembly(this MethodBase methodBase)
         {
-            return methodBase.DeclaringType.Assembly.FullName.StartsWith("System.Private.CoreLib");
+            return methodBase.DeclaringType.Assembly == typeof(Exception).Assembly;
         }
 
         public static bool IsOverride(this MethodBase methodBase)
