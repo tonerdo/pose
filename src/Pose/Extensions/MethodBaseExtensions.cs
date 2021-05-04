@@ -7,7 +7,7 @@ namespace Pose.Extensions
     {
         public static bool IsForValueType(this MethodBase methodBase) => methodBase.DeclaringType.IsValueType;
 
-        public static bool InSystemAssembly(this MethodBase methodBase)
+        public static bool InCoreLibrary(this MethodBase methodBase)
         {
             return methodBase.DeclaringType.Assembly == typeof(Exception).Assembly;
         }

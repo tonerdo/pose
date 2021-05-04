@@ -353,7 +353,7 @@ namespace Pose.IL
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
         {
-            if (methodInfo.InSystemAssembly())
+            if (methodInfo.InCoreLibrary())
             {
                 if (!methodInfo.DeclaringType.IsPublic) goto forward;
                 if (!methodInfo.IsPublic && !methodInfo.IsFamily && !methodInfo.IsFamilyOrAssembly) goto forward;
