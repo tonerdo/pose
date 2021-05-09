@@ -45,17 +45,17 @@ namespace Pose.Helpers
         public static int GetIndexOfMatchingShim(MethodBase methodBase, object obj)
             => GetIndexOfMatchingShim(methodBase, methodBase.DeclaringType, obj);
 
-        public static MethodInfo GetRuntimeMethodForVirtual(object obj, MethodInfo methodInfo)
+        public static MethodInfo DevirtualizeMethod(object obj, MethodInfo virtualMethodInfo)
         {
-            return GetRuntimeMethodForVirtual(obj.GetType(), methodInfo);
+            return DevirtualizeMethod(obj.GetType(), virtualMethodInfo);
         }
 
-        public static MethodInfo GetRuntimeMethodForVirtual(Type thisType, MethodInfo methodInfo)
+        public static MethodInfo DevirtualizeMethod(Type thisType, MethodInfo virtualMethodInfo)
         {
-            if (thisType == methodInfo.DeclaringType) return methodInfo;
-            BindingFlags bindingFlags = BindingFlags.Instance | (methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
-            Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            return thisType.GetMethod(methodInfo.Name, bindingFlags, null, types, null);
+            if (thisType == virtualMethodInfo.DeclaringType) return virtualMethodInfo;
+            BindingFlags bindingFlags = BindingFlags.Instance | (virtualMethodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
+            Type[] types = virtualMethodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+            return thisType.GetMethod(virtualMethodInfo.Name, bindingFlags, null, types, null);
         }
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;

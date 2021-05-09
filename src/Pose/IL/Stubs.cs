@@ -28,7 +28,7 @@ namespace Pose.IL
             s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase), typeof(bool) });
             s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
             s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
-            s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("GetRuntimeMethodForVirtual", new Type[] { typeof(object), typeof(MethodInfo) });
+            s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
         }
 
         public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
@@ -109,7 +109,7 @@ namespace Pose.IL
         public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo, TypeInfo constrainedType)
         {
             Type thisType = constrainedType.MakeByRefType();
-            MethodInfo actualMethod = StubHelper.GetRuntimeMethodForVirtual(constrainedType, methodInfo);
+            MethodInfo actualMethod = StubHelper.DevirtualizeMethod(constrainedType, methodInfo);
 
             List<Type> signatureParamTypes = new List<Type>();
             signatureParamTypes.Add(thisType);
