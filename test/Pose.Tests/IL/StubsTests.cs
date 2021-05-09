@@ -16,7 +16,7 @@ namespace Pose.Tests
         public void TestGenerateStubForStaticMethod()
         {
             MethodInfo methodInfo = typeof(Console).GetMethod("WriteLine", new[] { typeof(string) });
-            DynamicMethod dynamicMethod = Stubs.GenerateStubForMethod(methodInfo);
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForDirectCall(methodInfo);
             int count = dynamicMethod.GetParameters().Length;
 
             Assert.AreEqual(methodInfo.GetParameters().Length, dynamicMethod.GetParameters().Length - 2);
@@ -29,7 +29,7 @@ namespace Pose.Tests
         public void TestGenerateStubForInstanceMethod()
         {
             MethodInfo methodInfo = typeof(List<string>).GetMethod("Add");
-            DynamicMethod dynamicMethod = Stubs.GenerateStubForMethod(methodInfo);
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForDirectCall(methodInfo);
             int count = dynamicMethod.GetParameters().Length;
 
             Assert.AreEqual(methodInfo.GetParameters().Length, dynamicMethod.GetParameters().Length - 3);
@@ -42,7 +42,7 @@ namespace Pose.Tests
         public void TestGenerateStubForVirtualMethod()
         {
             MethodInfo methodInfo = typeof(List<string>).GetMethod("Add");
-            DynamicMethod dynamicMethod = Stubs.GenerateStubForVirtualMethod(methodInfo);
+            DynamicMethod dynamicMethod = Stubs.GenerateStubForVirtualCall(methodInfo);
             int count = dynamicMethod.GetParameters().Length;
 
             Assert.AreEqual(methodInfo.GetParameters().Length, dynamicMethod.GetParameters().Length - 3);

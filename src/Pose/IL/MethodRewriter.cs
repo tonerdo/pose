@@ -388,7 +388,7 @@ namespace Pose.IL
 
             if (instruction.OpCode == OpCodes.Call)
             {
-                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForMethod(methodInfo));
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForDirectCall(methodInfo));
                 return;
             }
 
@@ -396,12 +396,12 @@ namespace Pose.IL
             {
                 if (m_constrainedType != null)
                 {
-                    ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo, m_constrainedType));
+                    ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualCall(methodInfo, m_constrainedType));
                     m_constrainedType = null;
                     return;
                 }
 
-                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualMethod(methodInfo));
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualCall(methodInfo));
                 return;
             }
 

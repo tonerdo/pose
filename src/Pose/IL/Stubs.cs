@@ -31,7 +31,7 @@ namespace Pose.IL
             s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
         }
 
-        public static DynamicMethod GenerateStubForMethod(MethodInfo methodInfo)
+        public static DynamicMethod GenerateStubForDirectCall(MethodInfo methodInfo)
         {
             List<Type> signatureParamTypes = new List<Type>();
             if (!methodInfo.IsStatic)
@@ -106,7 +106,7 @@ namespace Pose.IL
             return stub;
         }
 
-        public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo, TypeInfo constrainedType)
+        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo methodInfo, TypeInfo constrainedType)
         {
             Type thisType = constrainedType.MakeByRefType();
             MethodInfo actualMethod = StubHelper.DevirtualizeMethod(constrainedType, methodInfo);
@@ -177,7 +177,7 @@ namespace Pose.IL
             return stub;
         }
 
-        public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo)
+        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo methodInfo)
         {
             Type thisType = methodInfo.DeclaringType.IsInterface ? typeof(object) : methodInfo.DeclaringType;
 
