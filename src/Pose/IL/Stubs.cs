@@ -20,7 +20,7 @@ namespace Pose.IL
 
         private static MethodInfo s_getMethodPointerMethod;
 
-        private static MethodInfo s_getRuntimeMethodForVirtualMethod;
+        private static MethodInfo s_devirtualizeMethodMethod;
 
         static Stubs()
         {
@@ -28,7 +28,7 @@ namespace Pose.IL
             s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase), typeof(bool) });
             s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
             s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
-            s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
+            s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
         }
 
         public static DynamicMethod GenerateStubForDirectCall(MethodInfo methodInfo)
@@ -224,7 +224,7 @@ namespace Pose.IL
             // Resolve virtual method to object type
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.Emit(OpCodes.Call, s_getRuntimeMethodForVirtualMethod);
+            ilGenerator.Emit(OpCodes.Call, s_devirtualizeMethodMethod);
             ilGenerator.Emit(methodInfo.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
 
             // Rewrite resolved method
