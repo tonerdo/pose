@@ -18,6 +18,8 @@ namespace Pose.IL
     {
         private MethodBase m_method;
 
+        private Type m_owningType;
+
         private bool m_isInterfaceDispatch;
 
         private int m_exceptionBlockLevel;
@@ -28,7 +30,7 @@ namespace Pose.IL
 
         public static MethodRewriter CreateRewriter(MethodBase method, bool isInterfaceDispatch)
         {
-            return new MethodRewriter { m_method = method, m_isInterfaceDispatch = isInterfaceDispatch };
+            return new MethodRewriter { m_method = method, m_owningType = method.DeclaringType, m_isInterfaceDispatch = isInterfaceDispatch };
         }
 
         public MethodBase Rewrite()
@@ -36,7 +38,7 @@ namespace Pose.IL
             List<Type> parameterTypes = new List<Type>();
             if (!m_method.IsStatic)
             {
-                Type thisType = m_method.IsForValueType() ? m_method.DeclaringType.MakeByRefType() : m_method.DeclaringType;
+                Type thisType = m_owningType.IsValueType ? m_owningType.MakeByRefType() : m_owningType;
                 thisType = m_isInterfaceDispatch ? typeof(object) : thisType;
                 parameterTypes.Add(thisType);
             }
@@ -236,7 +238,7 @@ namespace Pose.IL
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
         {
             ilGenerator.Emit(instruction.OpCode);
-            if (m_isInterfaceDispatch && m_method.IsForValueType() && instruction.OpCode == OpCodes.Ldarg_0)
+            if (m_isInterfaceDispatch && m_owningType.IsValueType && instruction.OpCode == OpCodes.Ldarg_0)
             {
                 EmitThisPointerAccessForBoxedValueType(ilGenerator);
             }
@@ -323,7 +325,7 @@ namespace Pose.IL
             else
                 ilGenerator.Emit(instruction.OpCode, (ushort)index);
 
-            if (m_isInterfaceDispatch && m_method.IsForValueType() && instruction.OpCode.Name.StartsWith("ldarg") && index == 0)
+            if (m_isInterfaceDispatch && m_owningType.IsValueType && instruction.OpCode.Name.StartsWith("ldarg") && index == 0)
             {
                 EmitThisPointerAccessForBoxedValueType(ilGenerator);
             }
@@ -364,7 +366,7 @@ namespace Pose.IL
                 return;
             }
 
-            stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.IsForValueType());
+            stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.DeclaringType.IsValueType);
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
             ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, stub);

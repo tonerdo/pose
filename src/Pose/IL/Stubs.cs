@@ -36,7 +36,7 @@ namespace Pose.IL
             List<Type> signatureParamTypes = new List<Type>();
             if (!methodInfo.IsStatic)
             {
-                Type thisType = methodInfo.IsForValueType() ? methodInfo.DeclaringType.MakeByRefType() : methodInfo.DeclaringType;
+                Type thisType = methodInfo.DeclaringType.IsValueType ? methodInfo.DeclaringType.MakeByRefType() : methodInfo.DeclaringType;
                 signatureParamTypes.Add(thisType);
             }
 
