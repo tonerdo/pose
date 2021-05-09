@@ -80,10 +80,10 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
-            ilGenerator.Emit(OpCodes.Ldc_I4_0);
 
             // Rewrite method
             ilGenerator.MarkLabel(rewriteLabel);
+            ilGenerator.Emit(OpCodes.Ldc_I4_0);
             ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
             ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
@@ -134,10 +134,10 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldtoken, actualMethod.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
-            ilGenerator.Emit(OpCodes.Ldc_I4_0);
 
             // Rewrite method
             ilGenerator.MarkLabel(rewriteLabel);
+            ilGenerator.Emit(OpCodes.Ldc_I4_0);
             ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
             ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
@@ -225,10 +225,10 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, s_devirtualizeMethodMethod);
-            ilGenerator.Emit(methodInfo.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
 
             // Rewrite resolved method
             ilGenerator.MarkLabel(rewriteLabel);
+            ilGenerator.Emit(methodInfo.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
             ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
             ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
