@@ -38,8 +38,12 @@ namespace Pose.IL
             List<Type> parameterTypes = new List<Type>();
             if (!m_method.IsStatic)
             {
-                Type thisType = m_owningType.IsValueType ? m_owningType.MakeByRefType() : m_owningType;
-                thisType = m_isInterfaceDispatch ? typeof(object) : thisType;
+                Type thisType = m_isInterfaceDispatch ? typeof(object) : m_owningType;
+                if (!m_isInterfaceDispatch && m_owningType.IsValueType)
+                {
+                    thisType = thisType.MakeByRefType();
+                }
+
                 parameterTypes.Add(thisType);
             }
 
