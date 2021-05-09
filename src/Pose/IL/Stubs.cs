@@ -25,7 +25,7 @@ namespace Pose.IL
         static Stubs()
         {
             s_getMethodFromHandleMethod = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) });
-            s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase) });
+            s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase), typeof(bool) });
             s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
             s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
             s_getRuntimeMethodForVirtualMethod = typeof(StubHelper).GetMethod("GetRuntimeMethodForVirtual", new Type[] { typeof(object), typeof(MethodInfo) });
@@ -75,6 +75,7 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+            ilGenerator.Emit(OpCodes.Ldc_I4_0);
 
             // Rewrite method
             ilGenerator.MarkLabel(rewriteLabel);
@@ -128,6 +129,7 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldtoken, actualMethod.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+            ilGenerator.Emit(OpCodes.Ldc_I4_0);
 
             // Rewrite method
             ilGenerator.MarkLabel(rewriteLabel);
@@ -172,7 +174,7 @@ namespace Pose.IL
 
         public static DynamicMethod GenerateStubForVirtualMethod(MethodInfo methodInfo)
         {
-            Type thisType = methodInfo.DeclaringType;
+            Type thisType = methodInfo.DeclaringType.IsInterface ? typeof(object) : methodInfo.DeclaringType;
 
             List<Type> signatureParamTypes = new List<Type>();
             signatureParamTypes.Add(thisType);
@@ -218,6 +220,7 @@ namespace Pose.IL
             ilGenerator.Emit(OpCodes.Ldarg_0);
             ilGenerator.Emit(OpCodes.Ldloc_0);
             ilGenerator.Emit(OpCodes.Call, s_getRuntimeMethodForVirtualMethod);
+            ilGenerator.Emit(methodInfo.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
 
             // Rewrite resolved method
             ilGenerator.MarkLabel(rewriteLabel);

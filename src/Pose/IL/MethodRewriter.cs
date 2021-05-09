@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
 using Mono.Reflection;
 
@@ -17,15 +18,17 @@ namespace Pose.IL
     {
         private MethodBase m_method;
 
+        private bool m_isInterfaceDispatch;
+
         private int m_exceptionBlockLevel;
 
         private TypeInfo m_constrainedType;
 
         private static List<OpCode> s_IngoredOpCodes = new List<OpCode> { OpCodes.Endfilter, OpCodes.Endfinally };
 
-        public static MethodRewriter CreateRewriter(MethodBase method)
+        public static MethodRewriter CreateRewriter(MethodBase method, bool isInterfaceDispatch)
         {
-            return new MethodRewriter { m_method = method };
+            return new MethodRewriter { m_method = method, m_isInterfaceDispatch = isInterfaceDispatch };
         }
 
         public MethodBase Rewrite()
@@ -34,6 +37,7 @@ namespace Pose.IL
             if (!m_method.IsStatic)
             {
                 Type thisType = m_method.IsForValueType() ? m_method.DeclaringType.MakeByRefType() : m_method.DeclaringType;
+                thisType = m_isInterfaceDispatch ? typeof(object) : thisType;
                 parameterTypes.Add(thisType);
             }
 
@@ -224,9 +228,18 @@ namespace Pose.IL
             }
         }
 
+        private void EmitThisPointerAccessForBoxedValueType(ILGenerator ilGenerator)
+        {
+            ilGenerator.Emit(OpCodes.Call, typeof(Unsafe).GetMethod("Unbox").MakeGenericMethod(m_method.DeclaringType));
+        }
+
         private void EmitILForInlineNone(ILGenerator ilGenerator, Instruction instruction)
         {
             ilGenerator.Emit(instruction.OpCode);
+            if (m_isInterfaceDispatch && m_method.IsForValueType() && instruction.OpCode == OpCodes.Ldarg_0)
+            {
+                EmitThisPointerAccessForBoxedValueType(ilGenerator);
+            }
         }
 
         private void EmitILForInlineI(ILGenerator ilGenerator, Instruction instruction)
@@ -296,7 +309,9 @@ namespace Pose.IL
         {
             int index = 0;
             if (instruction.OpCode.Name.Contains("loc"))
+            {
                 index = ((LocalVariableInfo)instruction.Operand).LocalIndex;
+            }
             else
             {
                 index = ((ParameterInfo)instruction.Operand).Position;
@@ -306,7 +321,12 @@ namespace Pose.IL
             if (instruction.OpCode.OperandType == OperandType.ShortInlineVar)
                 ilGenerator.Emit(instruction.OpCode, (byte)index);
             else
-                ilGenerator.Emit(instruction.OpCode, (short)index);
+                ilGenerator.Emit(instruction.OpCode, (ushort)index);
+
+            if (m_isInterfaceDispatch && m_method.IsForValueType() && instruction.OpCode.Name.StartsWith("ldarg") && index == 0)
+            {
+                EmitThisPointerAccessForBoxedValueType(ilGenerator);
+            }
         }
 
         private void EmitILForType(ILGenerator ilGenerator, Instruction instruction, TypeInfo typeInfo)
@@ -355,6 +375,7 @@ namespace Pose.IL
         {
             if (methodInfo.InCoreLibrary())
             {
+                // Don't attempt to rewrite unaccessible methods in System.Private.CoreLib/mscorlib
                 if (!methodInfo.DeclaringType.IsPublic) goto forward;
                 if (!methodInfo.IsPublic && !methodInfo.IsFamily && !methodInfo.IsFamilyOrAssembly) goto forward;
             }

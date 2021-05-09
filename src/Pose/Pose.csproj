@@ -16,5 +16,6 @@
   <ItemGroup>
     <PackageReference Include="Mono.Reflection.Core" Version="1.1.1" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0" />
   </ItemGroup>
 </Project>
