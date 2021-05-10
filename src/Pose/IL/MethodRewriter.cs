@@ -348,6 +348,13 @@ namespace Pose.IL
 
         private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, ConstructorInfo constructorInfo)
         {
+            if (constructorInfo.InCoreLibrary())
+            {
+                // Don't attempt to rewrite unaccessible constructors in System.Private.CoreLib/mscorlib
+                if (!constructorInfo.DeclaringType.IsPublic) goto forward;
+                if (!constructorInfo.IsPublic && !constructorInfo.IsFamily && !constructorInfo.IsFamilyOrAssembly) goto forward;
+            }
+
             if (instruction.OpCode == OpCodes.Call)
             {
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForDirectCall(constructorInfo));
@@ -360,6 +367,7 @@ namespace Pose.IL
                 return;
             }
 
+        forward:
             ilGenerator.Emit(instruction.OpCode, constructorInfo);
         }
 
