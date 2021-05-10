@@ -58,7 +58,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub", method),
+                StubHelper.CreateStubNameFromMethod("stub_call", method),
                 returnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
@@ -132,7 +132,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub_virt", method),
+                StubHelper.CreateStubNameFromMethod("stub_callvirt", method),
                 method.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
@@ -202,7 +202,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub_virt", method),
+                StubHelper.CreateStubNameFromMethod("stub_callvirt", method),
                 method.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
@@ -280,7 +280,7 @@ namespace Pose.IL
             signatureParamTypes.AddRange(constructor.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub_ctor", constructor),
+                StubHelper.CreateStubNameFromMethod("stub_newobj", constructor),
                 constructor.DeclaringType,
                 signatureParamTypes.Skip(1).ToArray(),
                 StubHelper.GetOwningModule(),
