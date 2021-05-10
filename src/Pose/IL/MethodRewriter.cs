@@ -156,7 +156,7 @@ namespace Pose.IL
                         EmitILForInlineMember(ilGenerator, instruction);
                         break;
                     default:
-                        throw new NotSupportedException();
+                        throw new NotSupportedException(instruction.OpCode.OperandType.ToString());
                 }
             }
 
