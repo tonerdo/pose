@@ -367,6 +367,10 @@ namespace Pose.IL
                 return;
             }
 
+            // If we get here, then we haven't accounted for an opcode.
+            // Throw exception to make this obvious.
+            throw new NotSupportedException(instruction.OpCode.Name);
+
         forward:
             ilGenerator.Emit(instruction.OpCode, constructorInfo);
         }
