@@ -346,35 +346,21 @@ namespace Pose.IL
             ilGenerator.Emit(instruction.OpCode, typeInfo);
         }
 
-        private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, MemberInfo memberInfo)
+        private void EmitILForConstructor(ILGenerator ilGenerator, Instruction instruction, ConstructorInfo constructorInfo)
         {
-            ConstructorInfo constructorInfo = memberInfo as ConstructorInfo;
-            if (PoseContext.StubCache.TryGetValue(constructorInfo, out DynamicMethod stub))
+            if (instruction.OpCode == OpCodes.Call)
             {
-                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-                ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, stub);
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForDirectCall(constructorInfo));
                 return;
             }
 
-            MethodBody methodBody = constructorInfo.GetMethodBody();
-            if (methodBody == null)
+            if (instruction.OpCode == OpCodes.Newobj)
             {
-                ilGenerator.Emit(instruction.OpCode, constructorInfo);
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForObjectInitialization(constructorInfo));
                 return;
             }
 
-            if (instruction.OpCode != OpCodes.Newobj && instruction.OpCode != OpCodes.Call)
-            {
-                ilGenerator.Emit(instruction.OpCode, constructorInfo);
-                return;
-            }
-
-            stub = Stubs.GenerateStubForConstructor(constructorInfo, instruction.OpCode, constructorInfo.DeclaringType.IsValueType);
-            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, constructorInfo.DeclaringType);
-            ilGenerator.Emit(OpCodes.Call, stub);
-            PoseContext.StubCache.TryAdd(constructorInfo, stub);
+            ilGenerator.Emit(instruction.OpCode, constructorInfo);
         }
 
         private void EmitILForMethod(ILGenerator ilGenerator, Instruction instruction, MethodInfo methodInfo)
@@ -423,7 +409,7 @@ namespace Pose.IL
             }
             else if (memberInfo.MemberType == MemberTypes.Constructor)
             {
-                ilGenerator.Emit(instruction.OpCode, memberInfo as ConstructorInfo);
+                EmitILForConstructor(ilGenerator, instruction, memberInfo as ConstructorInfo);
             }
             else if (memberInfo.MemberType == MemberTypes.Method)
             {

@@ -10,15 +10,15 @@ namespace Pose.Helpers
 {
     internal static class StubHelper
     {
-        public static IntPtr GetMethodPointer(MethodBase methodBase)
+        public static IntPtr GetMethodPointer(MethodBase method)
         {
-            if (methodBase is DynamicMethod)
+            if (method is DynamicMethod)
             {
                 var methodDescriptior = typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.Instance | BindingFlags.NonPublic);
-                return ((RuntimeMethodHandle)methodDescriptior.Invoke(methodBase as DynamicMethod, null)).GetFunctionPointer();
+                return ((RuntimeMethodHandle)methodDescriptior.Invoke(method as DynamicMethod, null)).GetFunctionPointer();
             }
 
-            return methodBase.MethodHandle.GetFunctionPointer();
+            return method.MethodHandle.GetFunctionPointer();
         }
 
         public static object GetShimDelegateTarget(int index)
@@ -45,42 +45,45 @@ namespace Pose.Helpers
         public static int GetIndexOfMatchingShim(MethodBase methodBase, object obj)
             => GetIndexOfMatchingShim(methodBase, methodBase.DeclaringType, obj);
 
-        public static MethodInfo DevirtualizeMethod(object obj, MethodInfo virtualMethodInfo)
+        public static MethodInfo DevirtualizeMethod(object obj, MethodInfo virtualMethod)
         {
-            return DevirtualizeMethod(obj.GetType(), virtualMethodInfo);
+            return DevirtualizeMethod(obj.GetType(), virtualMethod);
         }
 
-        public static MethodInfo DevirtualizeMethod(Type thisType, MethodInfo virtualMethodInfo)
+        public static MethodInfo DevirtualizeMethod(Type thisType, MethodInfo virtualMethod)
         {
-            if (thisType == virtualMethodInfo.DeclaringType) return virtualMethodInfo;
-            BindingFlags bindingFlags = BindingFlags.Instance | (virtualMethodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
-            Type[] types = virtualMethodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            return thisType.GetMethod(virtualMethodInfo.Name, bindingFlags, null, types, null);
+            if (thisType == virtualMethod.DeclaringType) return virtualMethod;
+            BindingFlags bindingFlags = BindingFlags.Instance | (virtualMethod.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
+            Type[] types = virtualMethod.GetParameters().Select(p => p.ParameterType).ToArray();
+            return thisType.GetMethod(virtualMethod.Name, bindingFlags, null, types, null);
         }
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;
 
-        public static bool IsIntrinsic(MethodInfo methodInfo)
+        public static bool IsIntrinsic(MethodBase method)
         {
-            return methodInfo.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
-                    methodInfo.DeclaringType.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
-                    methodInfo.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
+            return method.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    method.DeclaringType.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    method.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
         }
 
-        public static string CreateStubNameFromMethod(string prefix, MethodBase methodInfo)
+        public static string CreateStubNameFromMethod(string prefix, MethodBase method)
         {
             string name = prefix;
             name += "_";
-            name += methodInfo.DeclaringType.ToString();
+            name += method.DeclaringType.ToString();
             name += "_";
-            name += methodInfo.Name;
+            name += method.Name;
 
-            var genericArguments = methodInfo.GetGenericArguments();
-            if (genericArguments.Length > 0)
+            if (!method.IsConstructor)
             {
-                name += "[";
-                name += string.Join(',', genericArguments.Select(g => g.Name));
-                name += "]";
+                var genericArguments = method.GetGenericArguments();
+                if (genericArguments.Length > 0)
+                {
+                    name += "[";
+                    name += string.Join(',', genericArguments.Select(g => g.Name));
+                    name += "]";
+                }
             }
 
             return name;

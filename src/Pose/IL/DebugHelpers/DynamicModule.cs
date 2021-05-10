@@ -36,7 +36,9 @@ namespace Pose.IL.DebugHelpers
             Debug.Assert(dynamicScope != null);
 
             var handle = dynamicScope.GetType().GetMethod("get_Item", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(dynamicScope, new object[] { metadataToken });
+                            .Invoke(dynamicScope, new object[] { metadataToken });
+            
+            Debug.Assert(handle != null);
 
             if (handle is RuntimeTypeHandle typeHandle)
             {
