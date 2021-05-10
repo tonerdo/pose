@@ -415,6 +415,12 @@ namespace Pose.IL
                 return;
             }
 
+            if (instruction.OpCode == OpCodes.Ldvirtftn)
+            {
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualLoad(methodInfo));
+                return;
+            }
+
         forward:
             ilGenerator.Emit(instruction.OpCode, methodInfo);
         }

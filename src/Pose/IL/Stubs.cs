@@ -403,5 +403,58 @@ namespace Pose.IL
 
             return stub;
         }
+
+        public static DynamicMethod GenerateStubForVirtualLoad(MethodInfo method)
+        {
+            DynamicMethod stub = new DynamicMethod(
+                StubHelper.CreateStubNameFromMethod("stub_ldvirtftn", method),
+                typeof(IntPtr),
+                new Type[] { method.DeclaringType.IsInterface ? typeof(object) : method.DeclaringType },
+                StubHelper.GetOwningModule(),
+                true);
+            
+            ILGenerator ilGenerator = stub.GetILGenerator();
+
+            if ((method.GetMethodBody() == null && !method.IsAbstract) || StubHelper.IsIntrinsic(method))
+            {
+                // Method has no body or is a compiler intrinsic,
+                // simply forward arguments to original or shim
+                ilGenerator.Emit(OpCodes.Ldarg, 0);
+                ilGenerator.Emit(OpCodes.Ldvirtftn, method);
+                ilGenerator.Emit(OpCodes.Ret);
+                return stub;
+            }
+
+            ilGenerator.DeclareLocal(typeof(MethodInfo));
+
+            Label rewriteLabel = ilGenerator.DefineLabel();
+            Label returnLabel = ilGenerator.DefineLabel();
+
+            // Inject method info into instruction stream
+            ilGenerator.Emit(OpCodes.Ldtoken, method);
+            ilGenerator.Emit(OpCodes.Ldtoken, method.DeclaringType);
+            ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
+            ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
+            ilGenerator.Emit(OpCodes.Stloc_0);
+
+            // Resolve virtual method to object type
+            ilGenerator.Emit(OpCodes.Ldarg_0);
+            ilGenerator.Emit(OpCodes.Ldloc_0);
+            ilGenerator.Emit(OpCodes.Call, s_devirtualizeMethodMethod);
+
+            // Rewrite resolved method
+            ilGenerator.MarkLabel(rewriteLabel);
+            ilGenerator.Emit(method.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+            ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
+            ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
+
+            // Retrieve pointer to rewritten method
+            ilGenerator.Emit(OpCodes.Call, s_getMethodPointerMethod);
+
+            ilGenerator.MarkLabel(returnLabel);
+            ilGenerator.Emit(OpCodes.Ret);
+            
+            return stub;
+        }
     }
 }
