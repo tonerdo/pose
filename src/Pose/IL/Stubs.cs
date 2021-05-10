@@ -25,6 +25,10 @@ namespace Pose.IL
 
         private static MethodInfo s_devirtualizeMethodMethod;
 
+        private static MethodInfo s_getTypeFromHandleMethod;
+
+        private static MethodInfo s_getUninitializedObjectMethod;
+
         static Stubs()
         {
             s_getMethodFromHandleMethod = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) });
@@ -32,6 +36,8 @@ namespace Pose.IL
             s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
             s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
             s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
+            s_getTypeFromHandleMethod = typeof(Type).GetMethod("GetTypeFromHandle");
+            s_getUninitializedObjectMethod = typeof(RuntimeHelpers).GetMethod("GetUninitializedObject");
         }
 
         public static DynamicMethod GenerateStubForDirectCall(MethodBase method)
@@ -333,8 +339,8 @@ namespace Pose.IL
             else
             {
                 ilGenerator.Emit(OpCodes.Ldtoken, constructor.DeclaringType);
-                ilGenerator.Emit(OpCodes.Call, typeof(Type).GetMethod("GetTypeFromHandle"));
-                ilGenerator.Emit(OpCodes.Call, typeof(RuntimeHelpers).GetMethod("GetUninitializedObject"));
+                ilGenerator.Emit(OpCodes.Call, s_getTypeFromHandleMethod);
+                ilGenerator.Emit(OpCodes.Call, s_getUninitializedObjectMethod);
                 ilGenerator.Emit(OpCodes.Dup);
                 ilGenerator.Emit(OpCodes.Stloc_1);
             }
