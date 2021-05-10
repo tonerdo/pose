@@ -367,6 +367,12 @@ namespace Pose.IL
                 return;
             }
 
+            if (instruction.OpCode == OpCodes.Ldftn)
+            {
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForDirectLoad(constructorInfo));
+                return;
+            }
+
             // If we get here, then we haven't accounted for an opcode.
             // Throw exception to make this obvious.
             throw new NotSupportedException(instruction.OpCode.Name);
@@ -400,6 +406,12 @@ namespace Pose.IL
                 }
 
                 ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForVirtualCall(methodInfo));
+                return;
+            }
+
+            if (instruction.OpCode == OpCodes.Ldftn)
+            {
+                ilGenerator.Emit(OpCodes.Call, Stubs.GenerateStubForDirectLoad(methodInfo));
                 return;
             }
 
