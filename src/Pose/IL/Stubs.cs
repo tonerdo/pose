@@ -31,12 +31,12 @@ namespace Pose.IL
             s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
         }
 
-        public static DynamicMethod GenerateStubForDirectCall(MethodInfo methodInfo)
+        public static DynamicMethod GenerateStubForDirectCall(MethodInfo method)
         {
             List<Type> signatureParamTypes = new List<Type>();
-            if (!methodInfo.IsStatic)
+            if (!method.IsStatic)
             {
-                Type thisType = methodInfo.DeclaringType;
+                Type thisType = method.DeclaringType;
                 if (thisType.IsValueType)
                 {
                     thisType = thisType.MakeByRefType();
@@ -45,18 +45,18 @@ namespace Pose.IL
                 signatureParamTypes.Add(thisType);
             }
 
-            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
+            signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub", methodInfo),
-                methodInfo.ReturnType,
+                StubHelper.CreateStubNameFromMethod("stub", method),
+                method.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
                 true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
-            if (methodInfo.GetMethodBody() == null || StubHelper.IsIntrinsic(methodInfo))
+            if (method.GetMethodBody() == null || StubHelper.IsIntrinsic(method))
             {
                 // Method has no body or is a compiler intrinsic,
                 // simply forward arguments to original or shim
@@ -65,7 +65,7 @@ namespace Pose.IL
                     ilGenerator.Emit(OpCodes.Ldarg, i);
                 }
 
-                ilGenerator.Emit(OpCodes.Call, methodInfo);
+                ilGenerator.Emit(OpCodes.Call, method);
                 ilGenerator.Emit(OpCodes.Ret);
                 return stub;
             }
@@ -76,8 +76,8 @@ namespace Pose.IL
             Label returnLabel = ilGenerator.DefineLabel();
 
             // Inject method info into instruction stream
-            ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+            ilGenerator.Emit(OpCodes.Ldtoken, method);
+            ilGenerator.Emit(OpCodes.Ldtoken, method.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
 
@@ -98,7 +98,7 @@ namespace Pose.IL
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             }
             ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, method.ReturnType, signatureParamTypes.ToArray(), null);
 
             ilGenerator.MarkLabel(returnLabel);
             ilGenerator.Emit(OpCodes.Ret);
@@ -106,18 +106,18 @@ namespace Pose.IL
             return stub;
         }
 
-        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo methodInfo, TypeInfo constrainedType)
+        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo method, TypeInfo constrainedType)
         {
             Type thisType = constrainedType.MakeByRefType();
-            MethodInfo actualMethod = StubHelper.DevirtualizeMethod(constrainedType, methodInfo);
+            MethodInfo actualMethod = StubHelper.DevirtualizeMethod(constrainedType, method);
 
             List<Type> signatureParamTypes = new List<Type>();
             signatureParamTypes.Add(thisType);
-            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
+            signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub_virt", methodInfo),
-                methodInfo.ReturnType,
+                StubHelper.CreateStubNameFromMethod("stub_virt", method),
+                method.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
                 true);
@@ -169,7 +169,7 @@ namespace Pose.IL
                 }
             }
             ilGenerator.Emit(OpCodes.Ldloc_0);
-            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, method.ReturnType, signatureParamTypes.ToArray(), null);
 
             ilGenerator.MarkLabel(returnLabel);
             ilGenerator.Emit(OpCodes.Ret);
@@ -177,24 +177,24 @@ namespace Pose.IL
             return stub;
         }
 
-        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo methodInfo)
+        public static DynamicMethod GenerateStubForVirtualCall(MethodInfo method)
         {
-            Type thisType = methodInfo.DeclaringType.IsInterface ? typeof(object) : methodInfo.DeclaringType;
+            Type thisType = method.DeclaringType.IsInterface ? typeof(object) : method.DeclaringType;
 
             List<Type> signatureParamTypes = new List<Type>();
             signatureParamTypes.Add(thisType);
-            signatureParamTypes.AddRange(methodInfo.GetParameters().Select(p => p.ParameterType));
+            signatureParamTypes.AddRange(method.GetParameters().Select(p => p.ParameterType));
 
             DynamicMethod stub = new DynamicMethod(
-                StubHelper.CreateStubNameFromMethod("stub_virt", methodInfo),
-                methodInfo.ReturnType,
+                StubHelper.CreateStubNameFromMethod("stub_virt", method),
+                method.ReturnType,
                 signatureParamTypes.ToArray(),
                 StubHelper.GetOwningModule(),
                 true);
 
             ILGenerator ilGenerator = stub.GetILGenerator();
 
-            if ((methodInfo.GetMethodBody() == null && !methodInfo.IsAbstract) || StubHelper.IsIntrinsic(methodInfo))
+            if ((method.GetMethodBody() == null && !method.IsAbstract) || StubHelper.IsIntrinsic(method))
             {
                 // Method has no body or is a compiler intrinsic,
                 // simply forward arguments to original or shim
@@ -203,7 +203,7 @@ namespace Pose.IL
                     ilGenerator.Emit(OpCodes.Ldarg, i);
                 }
 
-                ilGenerator.Emit(OpCodes.Callvirt, methodInfo);
+                ilGenerator.Emit(OpCodes.Callvirt, method);
                 ilGenerator.Emit(OpCodes.Ret);
                 return stub;
             }
@@ -215,8 +215,8 @@ namespace Pose.IL
             Label returnLabel = ilGenerator.DefineLabel();
 
             // Inject method info into instruction stream
-            ilGenerator.Emit(OpCodes.Ldtoken, methodInfo);
-            ilGenerator.Emit(OpCodes.Ldtoken, methodInfo.DeclaringType);
+            ilGenerator.Emit(OpCodes.Ldtoken, method);
+            ilGenerator.Emit(OpCodes.Ldtoken, method.DeclaringType);
             ilGenerator.Emit(OpCodes.Call, s_getMethodFromHandleMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
             ilGenerator.Emit(OpCodes.Stloc_0);
@@ -228,7 +228,7 @@ namespace Pose.IL
 
             // Rewrite resolved method
             ilGenerator.MarkLabel(rewriteLabel);
-            ilGenerator.Emit(methodInfo.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+            ilGenerator.Emit(method.DeclaringType.IsInterface ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
             ilGenerator.Emit(OpCodes.Call, s_createRewriterMethod);
             ilGenerator.Emit(OpCodes.Call, s_rewriteMethod);
             ilGenerator.Emit(OpCodes.Castclass, typeof(MethodInfo));
@@ -243,7 +243,7 @@ namespace Pose.IL
                 ilGenerator.Emit(OpCodes.Ldarg, i);
             }
             ilGenerator.Emit(OpCodes.Ldloc_1);
-            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, methodInfo.ReturnType, signatureParamTypes.ToArray(), null);
+            ilGenerator.EmitCalli(OpCodes.Calli, CallingConventions.Standard, method.ReturnType, signatureParamTypes.ToArray(), null);
 
             ilGenerator.MarkLabel(returnLabel);
             ilGenerator.Emit(OpCodes.Ret);
