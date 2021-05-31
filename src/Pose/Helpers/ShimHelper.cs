@@ -43,7 +43,7 @@ namespace Pose.Helpers
 
         public static void ValidateReplacementMethodSignature(MethodBase original, MethodInfo replacement, Type type, bool setter)
         {
-            bool isValueType = original.IsForValueType();
+            bool isValueType = original.DeclaringType.IsValueType;
             bool isStatic = original.IsStatic;
             bool isConstructor = original.IsConstructor;
             bool isStaticOrConstructor = isStatic || isConstructor;

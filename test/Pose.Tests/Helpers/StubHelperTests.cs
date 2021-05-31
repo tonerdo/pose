@@ -71,7 +71,7 @@ namespace Pose.Tests
         {
             Type type = typeof(StubHelperTests);
             MethodInfo methodInfo = type.GetMethod("TestGetRuntimeMethodForVirtual");
-            Assert.AreEqual(methodInfo, StubHelper.GetRuntimeMethodForVirtual(type, methodInfo));
+            Assert.AreEqual(methodInfo, StubHelper.DevirtualizeMethod(type, methodInfo));
         }
 
         [TestMethod]

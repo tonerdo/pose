@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -10,15 +9,15 @@ namespace Pose.Helpers
 {
     internal static class StubHelper
     {
-        public static IntPtr GetMethodPointer(MethodBase methodBase)
+        public static IntPtr GetMethodPointer(MethodBase method)
         {
-            if (methodBase is DynamicMethod)
+            if (method is DynamicMethod)
             {
                 var methodDescriptior = typeof(DynamicMethod).GetMethod("GetMethodDescriptor", BindingFlags.Instance | BindingFlags.NonPublic);
-                return ((RuntimeMethodHandle)methodDescriptior.Invoke(methodBase as DynamicMethod, null)).GetFunctionPointer();
+                return ((RuntimeMethodHandle)methodDescriptior.Invoke(method as DynamicMethod, null)).GetFunctionPointer();
             }
 
-            return methodBase.MethodHandle.GetFunctionPointer();
+            return method.MethodHandle.GetFunctionPointer();
         }
 
         public static object GetShimDelegateTarget(int index)
@@ -45,14 +44,49 @@ namespace Pose.Helpers
         public static int GetIndexOfMatchingShim(MethodBase methodBase, object obj)
             => GetIndexOfMatchingShim(methodBase, methodBase.DeclaringType, obj);
 
-        public static MethodInfo GetRuntimeMethodForVirtual(Type type, MethodInfo methodInfo)
+        public static MethodInfo DevirtualizeMethod(object obj, MethodInfo virtualMethod)
         {
-            BindingFlags bindingFlags = BindingFlags.Instance | (methodInfo.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
-            Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            return type.GetMethod(methodInfo.Name, bindingFlags, null, types, null);
+            return DevirtualizeMethod(obj.GetType(), virtualMethod);
+        }
+
+        public static MethodInfo DevirtualizeMethod(Type thisType, MethodInfo virtualMethod)
+        {
+            if (thisType == virtualMethod.DeclaringType) return virtualMethod;
+            BindingFlags bindingFlags = BindingFlags.Instance | (virtualMethod.IsPublic ? BindingFlags.Public : BindingFlags.NonPublic);
+            Type[] types = virtualMethod.GetParameters().Select(p => p.ParameterType).ToArray();
+            return thisType.GetMethod(virtualMethod.Name, bindingFlags, null, types, null);
         }
 
         public static Module GetOwningModule() => typeof(StubHelper).Module;
+
+        public static bool IsIntrinsic(MethodBase method)
+        {
+            return method.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    method.DeclaringType.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IntrinsicAttribute") ||
+                    method.DeclaringType.FullName.StartsWith("System.Runtime.Intrinsics");
+        }
+
+        public static string CreateStubNameFromMethod(string prefix, MethodBase method)
+        {
+            string name = prefix;
+            name += "_";
+            name += method.DeclaringType.ToString();
+            name += "_";
+            name += method.Name;
+
+            if (!method.IsConstructor)
+            {
+                var genericArguments = method.GetGenericArguments();
+                if (genericArguments.Length > 0)
+                {
+                    name += "[";
+                    name += string.Join(',', genericArguments.Select(g => g.Name));
+                    name += "]";
+                }
+            }
+
+            return name;
+        }
 
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
         {
