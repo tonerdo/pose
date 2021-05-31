@@ -161,14 +161,8 @@ namespace Pose.IL
             }
 
 #if DEBUG
-            var bakeByteArray = typeof(ILGenerator).GetMethod("BakeByteArray", BindingFlags.Instance | BindingFlags.NonPublic);
-            Debug.Assert(bakeByteArray != null);
-
-            byte[] ilBytes = (byte[])bakeByteArray.Invoke(ilGenerator, null);
-            Debug.Assert(ilBytes != null && ilBytes.Length > 0);
-
+            var ilBytes = ilGenerator.GetILBytes();
             var browsableDynamicMethod = new BrowsableDynamicMethod(dynamicMethod, new DynamicMethodBody(ilBytes, locals));
-
             Debug.WriteLine("\n" + dynamicMethod);
 
             foreach (var instruction in browsableDynamicMethod.GetInstructions())
