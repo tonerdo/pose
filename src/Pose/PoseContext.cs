@@ -24,7 +24,7 @@ namespace Pose
             StubCache = new Dictionary<MethodBase, DynamicMethod>();
 
             Type delegateType = typeof(Action<>).MakeGenericType(entryPoint.Target.GetType());
-            MethodRewriter rewriter = MethodRewriter.CreateRewriter(entryPoint.Method);
+            MethodRewriter rewriter = MethodRewriter.CreateRewriter(entryPoint.Method, false);
             ((MethodInfo)(rewriter.Rewrite())).CreateDelegate(delegateType).DynamicInvoke(entryPoint.Target);
         }
     }

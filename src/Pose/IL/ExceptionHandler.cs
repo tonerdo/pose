@@ -1,14 +1,22 @@
 using System;
+using System.Reflection;
 
 namespace Pose.IL
 {
-    internal struct ExceptionHandler
+    internal class ExceptionHandler
     {
         public Type CatchType;
-        public string Flag;
+
+        public ExceptionHandlingClauseOptions Flags;
+
         public int TryStart;
+
         public int TryEnd;
+
+        public int FilterStart;
+
         public int HandlerStart;
+
         public int HandlerEnd;
     }
 }
