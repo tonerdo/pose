@@ -1,14 +1,10 @@
 using System;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Threading;
 
-using Pose.Exceptions;
-using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using static System.Console;
+using Pose.Exceptions;
 
 namespace Pose.Tests
 {
@@ -80,8 +76,7 @@ namespace Pose.Tests
 
             Assert.AreEqual(typeof(Thread).GetProperty(nameof(Thread.CurrentCulture), typeof(CultureInfo)).SetMethod, shim.Original);
             Assert.IsNull(shim.Replacement);
-        }
-        
+        }        
         
         [TestMethod]
         [Ignore]
