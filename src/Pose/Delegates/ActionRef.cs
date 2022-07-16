@@ -1,5 +1,3 @@
-using System;
-
 namespace Pose.Delegates
 {
     public delegate void ActionRef<T>(ref T arg);

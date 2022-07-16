@@ -1,11 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
 using Pose.Exceptions;
-using Pose.Extensions;
 
 namespace Pose.Helpers
 {

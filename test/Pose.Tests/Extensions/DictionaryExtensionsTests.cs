@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 
-using Pose.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Pose.Tests

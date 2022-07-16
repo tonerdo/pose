@@ -1,9 +1,8 @@
 using System;
-using System.Linq.Expressions;
-using System.Reflection;
+
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 using Pose.IL;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Pose.Tests
 {

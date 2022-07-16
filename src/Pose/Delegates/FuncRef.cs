@@ -1,5 +1,3 @@
-using System;
-
 namespace Pose.Delegates
 {
     public delegate TResult FuncRef<T1, TResult>(ref T1 arg1);

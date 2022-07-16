@@ -1,10 +1,10 @@
 using System;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
 
-using Pose.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using Pose.Helpers;
 
 namespace Pose.Tests
 {

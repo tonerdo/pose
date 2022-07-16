@@ -91,14 +91,14 @@ namespace Pose.Helpers
         private static bool SignatureEquals(Shim shim, Type type, MethodBase method)
         {
             if (shim.Type == null || type == shim.Type)
-                return $"{shim.Type}::{shim.Original.ToString()}" == $"{type}::{method.ToString()}";
+                return $"{shim.Type}::{shim.Original}" == $"{type}::{method}";
 
             if (type.IsSubclassOf(shim.Type))
             {
                 if ((shim.Original.IsAbstract || !shim.Original.IsVirtual)
                         || (shim.Original.IsVirtual && !method.IsOverride()))
                 {
-                    return $"{shim.Original.ToString()}" == $"{method.ToString()}";
+                    return $"{shim.Original}" == $"{method}";
                 }
             }
 
