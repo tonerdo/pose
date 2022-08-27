@@ -80,7 +80,7 @@ namespace Pose.Helpers
                 if (genericArguments.Length > 0)
                 {
                     name += "[";
-                    name += string.Join(',', genericArguments.Select(g => g.Name));
+                    name += string.Join(",", genericArguments.Select(g => g.Name));
                     name += "]";
                 }
             }

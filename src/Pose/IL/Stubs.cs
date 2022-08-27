@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using Pose.Helpers;
 
 namespace Pose.IL
@@ -26,13 +27,19 @@ namespace Pose.IL
 
         static Stubs()
         {
-            s_getMethodFromHandleMethod = typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) });
-            s_createRewriterMethod = typeof(MethodRewriter).GetMethod("CreateRewriter", new Type[] { typeof(MethodBase), typeof(bool) });
-            s_rewriteMethod = typeof(MethodRewriter).GetMethod("Rewrite");
-            s_getMethodPointerMethod = typeof(StubHelper).GetMethod("GetMethodPointer");
-            s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod("DevirtualizeMethod", new Type[] { typeof(object), typeof(MethodInfo) });
-            s_getTypeFromHandleMethod = typeof(Type).GetMethod("GetTypeFromHandle");
-            s_getUninitializedObjectMethod = typeof(RuntimeHelpers).GetMethod("GetUninitializedObject");
+            s_getMethodFromHandleMethod = typeof(MethodBase).GetMethod(nameof(MethodBase.GetMethodFromHandle), new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) });
+            s_createRewriterMethod = typeof(MethodRewriter).GetMethod(nameof(MethodRewriter.CreateRewriter), new Type[] { typeof(MethodBase), typeof(bool) });
+            s_rewriteMethod = typeof(MethodRewriter).GetMethod(nameof(MethodRewriter.Rewrite));
+            s_getMethodPointerMethod = typeof(StubHelper).GetMethod(nameof(StubHelper.GetMethodPointer));
+            s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod(nameof(StubHelper.DevirtualizeMethod), new Type[] { typeof(object), typeof(MethodInfo) });
+            s_getTypeFromHandleMethod = typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle));
+
+#if NETSTANDARD2_1
+            s_getUninitializedObjectMethod = typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.GetUninitializedObject));
+#else
+            // see https://github.com/dotnet/runtime/blob/main/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Metadata/DefaultValueHolder.cs
+            s_getUninitializedObjectMethod = typeof(FormatterServices).GetMethod(nameof(FormatterServices.GetUninitializedObject));
+#endif
         }
 
         public static DynamicMethod GenerateStubForDirectCall(MethodBase method)

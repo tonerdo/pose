@@ -3,7 +3,7 @@
     <Title>Pose</Title>
     <Description>Replace any .NET method (including static and non-virtual) with a delegate</Description>
     <PackageVersion>1.2.1</PackageVersion>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>portable</DebugType>
     <AssemblyName>Pose</AssemblyName>
     <PackageId>Pose</PackageId>
