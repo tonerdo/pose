@@ -1,4 +1,9 @@
-version: '1.2.0.{build}'
+version: '1.2.1.{build}'
+image: Visual Studio 2022
+environment:
+  matrix:
+    - targetframework: net48
+    - targetframework: netcoreapp3.1
 configuration:
   - Debug
   - Release
@@ -7,7 +12,7 @@ build_script:
   - dotnet restore
   - dotnet build -c %CONFIGURATION%
 test_script:
-  - ps: dotnet test .\test\Pose.Tests\Pose.Tests.csproj
+  - ps: dotnet test -f %TARGETFRAMEWORK% .\test\Pose.Tests\Pose.Tests.csproj
   - ps: if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
 cache:
   - '%USERPROFILE%\.nuget\packages'
