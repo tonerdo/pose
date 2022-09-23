@@ -34,12 +34,8 @@ namespace Pose.IL
             s_devirtualizeMethodMethod = typeof(StubHelper).GetMethod(nameof(StubHelper.DevirtualizeMethod), new Type[] { typeof(object), typeof(MethodInfo) });
             s_getTypeFromHandleMethod = typeof(Type).GetMethod(nameof(Type.GetTypeFromHandle));
 
-#if NETSTANDARD2_1
-            s_getUninitializedObjectMethod = typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.GetUninitializedObject));
-#else
             // see https://github.com/dotnet/runtime/blob/main/src/libraries/System.Text.Json/src/System/Text/Json/Serialization/Metadata/DefaultValueHolder.cs
             s_getUninitializedObjectMethod = typeof(FormatterServices).GetMethod(nameof(FormatterServices.GetUninitializedObject));
-#endif
         }
 
         public static DynamicMethod GenerateStubForDirectCall(MethodBase method)
